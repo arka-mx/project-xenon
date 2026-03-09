@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Building2, Target, Users, Award, User } from "lucide-react";
 
 export default function AboutPage() {
@@ -123,8 +124,14 @@ export default function AboutPage() {
             {/* Team Member 1 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                    src="https://res.cloudinary.com/du5qoczcn/image/upload/v1773081079/IMG_2169_ealh6r.jpg"
+                    alt="Debi Prasad Sahoo"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Debi Prasad Sahoo
@@ -143,8 +150,14 @@ export default function AboutPage() {
             {/* Team Member 2 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081081/IMG_2170_s2qrjn.jpg"}
+                     alt="Ankush Senapati"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Ankush Senapati
@@ -163,8 +176,14 @@ export default function AboutPage() {
             {/* Team Member 3 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081082/IMG_2171_gll65n.jpg"}
+                      alt="Roupya Swasat Prusty"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Roupya Swasat Prusty
@@ -183,8 +202,14 @@ export default function AboutPage() {
             {/* Team Member 4 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081084/IMG_2175_yzl7jc.jpg"}
+                     alt="Preetam Samal"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Preetam Samal
@@ -203,8 +228,14 @@ export default function AboutPage() {
             {/* Team Member 5 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081081/IMG_2176_xx5ksb.jpg"}
+                     alt="Debansh Sahu"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Debansh Sahu
@@ -223,8 +254,15 @@ export default function AboutPage() {
             {/* Team Member 6 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081077/IMG_2168_s7qqig.jpg"}
+            
+                     alt="Churepally Neha"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Churepally Neha
@@ -243,8 +281,14 @@ export default function AboutPage() {
             {/* Team Member 7 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081075/IMG_2197_w0sovn.jpg"}
+                     alt="Pulin Mohapatra"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Pulin Mohapatra
@@ -263,8 +307,15 @@ export default function AboutPage() {
             {/* Team Member 8 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081079/IMG_2174_b7n0re.jpg"}
+
+                     alt="Durgaprasad Sahoo"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Durgaprasad Sahoo
@@ -282,8 +333,14 @@ export default function AboutPage() {
             {/* Team Member 9 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow">
               <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md">
-                  <User className="w-16 h-16 text-[#2563eb]" />
+                <div className="w-32 h-32 rounded-full mb-4 overflow-hidden border-4 border-white shadow-md">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081060/IMG_2177_1_og5vqm.jpg"}
+                     alt="Omkar Ashutosh Behera"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                   Omkar Ashutosh Behera

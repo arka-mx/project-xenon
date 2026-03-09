@@ -21,7 +21,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Search */}
-      <div className="bg-gradient-to-br from-[#2563eb] via-blue-600 to-blue-600 text-white py-16 px-4 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2563eb] via-blue-600 to-blue-600 text-white min-h-screen py-16 px-4 relative overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>

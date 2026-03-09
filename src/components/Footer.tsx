@@ -9,8 +9,6 @@ export default function Footer() {
   const quickLinks = [
     { name: "About Us", href: "/about" },
     { name: "Contact Us", href: "/contact" },
-    { name: "How It Works", href: "/how-it-works" },
-    { name: "Pricing", href: "/pricing" },
   ];
 
   const categories = [
@@ -74,13 +72,33 @@ export default function Footer() {
                 <Phone size={16} />
                 <span>7655-052057</span>
               </a>
-              <div className="flex items-start gap-2 text-sm">
+              <a
+                href="https://www.google.com/maps/place/Hoardspace+bookings+private+limited/@22.2430295,84.9088836,3670m/data=!3m1!1e3!4m6!3m5!1s0x3a201dc4b4a548d5:0x7066c2143a6fd952!8m2!3d22.2548078!4d84.9031843!16s%2Fg%2F11yxhjq0k1?entry=ttu&g_ep=EgoyMDI2MDMwNC4xIKXMDSoASAFQAw%3D%3D"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-2 text-sm hover:text-[#2563eb] transition-colors"
+              >
                 <MapPin size={16} className="mt-0.5 shrink-0" />
                 <span>
                   TI-103(A), First Floor, TIIR Building (FTBI),
                   <br />
                   NIT Rourkela Campus, Odisha - 769008
                 </span>
+              </a>
+            </div>
+
+            {/* Company Registration Details */}
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <h4 className="text-white font-semibold text-sm mb-3">
+                Company Details
+              </h4>
+              <div className="space-y-1.5 text-xs text-gray-400">
+                <p className="font-medium text-gray-300">
+                  Hoardspace Bookings Private Limited
+                </p>
+                <p>CIN NO: U63120OD2025PTC051640</p>
+                <p>PAN NO: AAICH3418E</p>
+                <p>TAN NO: BBNH01998D</p>
               </div>
             </div>
           </div>

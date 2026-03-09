@@ -27,9 +27,37 @@ interface Hoarding {
   images: string[];
 }
 
+interface Booking {
+  _id: string;
+  hoarding: {
+    _id: string;
+    name: string;
+    location: {
+      address: string;
+      city: string;
+    };
+    pricePerMonth: number;
+  } | null;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  } | null;
+  startDate: string;
+  endDate: string;
+  totalAmount: number;
+  status: string;
+  paymentId?: string;
+  orderId: string;
+  createdAt: string;
+}
+
 export default function VendorDashboard() {
   const router = useRouter();
   const [hoardings, setHoardings] = useState<Hoarding[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [activeTab, setActiveTab] = useState<"listings" | "payments">("listings");
   const [loading, setLoading] = useState(true);
   const [errorObj, setErrorObj] = useState<{
     status: number;
@@ -42,6 +70,7 @@ export default function VendorDashboard() {
     hoardingName: string;
   }>({ isOpen: false, hoardingId: null, hoardingName: "" });
   const [deleting, setDeleting] = useState(false);
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("");
 
   // Check authentication on mount
   useEffect(() => {
@@ -108,6 +137,31 @@ export default function VendorDashboard() {
 
     fetchHoardings();
   }, [router, authChecked]);
+
+  // Fetch bookings for vendor's hoardings
+  const fetchBookings = async () => {
+    try {
+      let url = "/api/vendor/bookings";
+      if (bookingStatusFilter) {
+        url += `?status=${bookingStatusFilter}`;
+      }
+
+      const res = await fetchWithAuth(url);
+      if (res.ok) {
+        const data = await res.json();
+        setBookings(data.bookings);
+      }
+    } catch (error) {
+      console.error("Failed to fetch bookings", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!authChecked) return;
+    if (activeTab === "payments") {
+      fetchBookings();
+    }
+  }, [authChecked, activeTab, bookingStatusFilter]);
 
   const handleDeleteClick = (id: string, name: string) => {
     setDeleteModal({ isOpen: true, hoardingId: id, hoardingName: name });
@@ -192,7 +246,31 @@ export default function VendorDashboard() {
           </Link>
         </div>
 
-        {/* Stats Overview (Placeholder) */}
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex gap-2">
+          <button
+            onClick={() => setActiveTab("listings")}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === "listings"
+                ? "bg-[#2563eb] text-white shadow-md"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            My Listings
+          </button>
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === "payments"
+                ? "bg-[#2563eb] text-white shadow-md"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Payment History
+          </button>
+        </div>
+
+        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="text-gray-500 text-sm font-medium mb-1">
@@ -206,23 +284,30 @@ export default function VendorDashboard() {
             <div className="text-gray-500 text-sm font-medium mb-1">
               Active Bookings
             </div>
-            <div className="text-3xl font-bold text-gray-900">0</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {bookings.filter((b) => b.status === "confirmed").length}
+            </div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="text-gray-500 text-sm font-medium mb-1">
               Total Revenue
             </div>
             <div className="text-3xl font-bold text-gray-900 flex items-center">
-              <IndianRupee size={24} /> 0
+              <IndianRupee size={24} />
+              {bookings
+                .filter((b) => b.status === "confirmed")
+                .reduce((sum, b) => sum + b.totalAmount, 0)
+                .toLocaleString()}
             </div>
           </div>
         </div>
 
         {/* Listings Grid */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-gray-900">Your Listings</h2>
-          </div>
+        {activeTab === "listings" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Your Listings</h2>
+            </div>
 
           {hoardings.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
@@ -312,6 +397,184 @@ export default function VendorDashboard() {
             </div>
           )}
         </div>
+        )}
+
+        {/* Payment History */}
+        {activeTab === "payments" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Payment History</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Filters */}
+              <div className="flex gap-4 items-center">
+                <select
+                  value={bookingStatusFilter}
+                  onChange={(e) => setBookingStatusFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563eb] outline-none"
+                >
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Stats Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-green-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-green-600 uppercase">
+                    Total Revenue
+                  </p>
+                  <p className="text-2xl font-bold text-green-700">
+                    ₹
+                    {bookings
+                      .filter((b) => b.status === "confirmed")
+                      .reduce((sum, b) => sum + b.totalAmount, 0)
+                      .toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-blue-600 uppercase">
+                    Confirmed Bookings
+                  </p>
+                  <p className="text-2xl font-bold text-blue-700">
+                    {bookings.filter((b) => b.status === "confirmed").length}
+                  </p>
+                </div>
+                <div className="bg-yellow-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-yellow-600 uppercase">
+                    Pending Payments
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-700">
+                    {bookings.filter((b) => b.status === "pending").length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Payments Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Booking ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Hoarding
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Period
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Amount
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Payment Details
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {bookings.map((booking) => (
+                      <tr key={booking._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4">
+                          <p className="text-xs font-mono text-gray-500">
+                            {booking._id.slice(-8)}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          {booking.hoarding ? (
+                            <div>
+                              <p className="font-semibold text-gray-900 text-sm">
+                                {booking.hoarding.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {booking.hoarding.location.city}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-red-500 italic">
+                              Hoarding deleted
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-xs">
+                            <p className="text-gray-600">
+                              {new Date(booking.startDate).toLocaleDateString()}
+                            </p>
+                            <p className="text-gray-400">to</p>
+                            <p className="text-gray-600">
+                              {new Date(booking.endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-gray-900">
+                            ₹{booking.totalAmount.toLocaleString()}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-xs space-y-1">
+                            <div>
+                              <span className="text-gray-500">Order ID:</span>
+                              <p className="font-mono text-gray-700 break-all">
+                                {booking.orderId}
+                              </p>
+                            </div>
+                            {booking.paymentId && (
+                              <div>
+                                <span className="text-gray-500">
+                                  Payment ID:
+                                </span>
+                                <p className="font-mono text-green-700 break-all">
+                                  {booking.paymentId}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                              booking.status === "confirmed"
+                                ? "bg-green-100 text-green-700"
+                                : booking.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-xs text-gray-600">
+                            {new Date(booking.createdAt).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(booking.createdAt).toLocaleTimeString()}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bookings.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    No payments found
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
