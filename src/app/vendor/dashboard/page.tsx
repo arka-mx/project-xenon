@@ -69,9 +69,9 @@ interface Booking {
   startDate: string;
   endDate: string;
   totalAmount: number;
-  status: string;
+  status: "requested" | "approved" | "rejected" | "confirmed" | "cancelled";
   paymentId?: string;
-  orderId: string;
+  orderId?: string;
   createdAt: string;
 }
 
@@ -127,6 +127,7 @@ export default function VendorDashboard() {
   const [userData, setUserData] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newHoarding, setNewHoarding] = useState<any>({
     name: "",
@@ -351,6 +352,40 @@ export default function VendorDashboard() {
       setChatLoading(false);
     }
     return false;
+  };
+
+  const updateBookingRequestStatus = async (
+    bookingId: string,
+    status: "requested" | "approved" | "rejected",
+  ) => {
+    setBookingActionId(bookingId);
+    try {
+      const res = await fetchWithAuth(`/api/vendor/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update booking request");
+      }
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking._id === bookingId ? { ...booking, status } : booking,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to update booking status", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to update booking request",
+      );
+    } finally {
+      setBookingActionId(null);
+    }
   };
 
   const handlePincodeChangeModal = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -716,7 +751,7 @@ export default function VendorDashboard() {
         <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <h1 className="text-xl font-bold text-gray-800 hidden md:block">
-              {activeTab === "dashboard" ? "Vendor Overview" : activeTab === "listings" ? "Hoarding Inventory" : activeTab === "sold" ? "Confirmed Bookings" : "Admin Communication"}
+              {activeTab === "dashboard" ? "Vendor Overview" : activeTab === "listings" ? "Hoarding Inventory" : activeTab === "sold" ? "Booking Requests" : "Admin Communication"}
             </h1>
             <div className="relative max-w-md w-full ml-4 hidden sm:block">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-500 transition-colors" size={16} />
@@ -843,7 +878,13 @@ export default function VendorDashboard() {
               openAvailabilityModal={openAvailabilityModal}
             />
           )}
-          {activeTab === "sold" && <SoldBookings bookings={filteredBookings} />}
+          {activeTab === "sold" && (
+            <BookingRequests
+              bookings={filteredBookings}
+              bookingActionId={bookingActionId}
+              onUpdateStatus={updateBookingRequestStatus}
+            />
+          )}
           {activeTab === "chat" && <ChatBox messages={messages} onSend={handleSendMessage} userData={userData} loading={chatLoading} />}
         </div>
       </main>
@@ -1428,7 +1469,9 @@ function MetricCard({ title, value, subtext, type = "default" }: { title: string
 function Overview({ bookings, hoardings, setActiveTab }: { bookings: Booking[]; hoardings: Hoarding[]; setActiveTab: (t: any) => void }) {
   const currentYear = new Date().getFullYear();
   const confirmedBookings = bookings.filter((booking) => booking.status === "confirmed");
-  const pendingBookings = bookings.filter((booking) => booking.status === "pending");
+  const pendingBookings = bookings.filter(
+    (booking) => booking.status === "requested" || booking.status === "approved",
+  );
   const approvedListings = hoardings.filter((hoarding) => hoarding.status === "approved").length;
   const pendingListings = hoardings.filter((hoarding) => hoarding.status === "pending").length;
   const revenue = confirmedBookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
@@ -1463,7 +1506,7 @@ function Overview({ bookings, hoardings, setActiveTab }: { bookings: Booking[]; 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <MetricCard title="Revenue" value={`₹${revenue.toLocaleString()}`} subtext={`${confirmedBookings.length} confirmed bookings`} type="revenue" />
         <MetricCard title="Active Listings" value={approvedListings.toString()} subtext={pendingListings > 0 ? `${pendingListings} pending approval` : "No listings pending approval"} />
-        <MetricCard title="Confirmed Bookings" value={confirmedBookings.length.toString()} subtext={pendingBookings.length > 0 ? `${pendingBookings.length} pending bookings` : "No pending bookings"} />
+        <MetricCard title="Confirmed Bookings" value={confirmedBookings.length.toString()} subtext={pendingBookings.length > 0 ? `${pendingBookings.length} pending requests` : "No pending requests"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1712,6 +1755,265 @@ function SoldBookings({ bookings }: { bookings: Booking[] }) {
                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">No confirmed bookings yet</p>
                      </div>
                    </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingRequests({
+  bookings,
+  bookingActionId,
+  onUpdateStatus,
+}: {
+  bookings: Booking[];
+  bookingActionId: string | null;
+  onUpdateStatus: (
+    bookingId: string,
+    status: "requested" | "approved" | "rejected",
+  ) => Promise<void>;
+}) {
+  const confirmedRevenue = bookings
+    .filter((booking) => booking.status === "confirmed")
+    .reduce((sum, booking) => sum + booking.totalAmount, 0);
+
+  const getStatusClasses = (status: Booking["status"]) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-50 text-green-600";
+      case "approved":
+        return "bg-blue-50 text-blue-600";
+      case "requested":
+        return "bg-amber-50 text-amber-600";
+      case "rejected":
+        return "bg-red-50 text-red-600";
+      case "cancelled":
+        return "bg-gray-100 text-gray-500";
+      default:
+        return "bg-gray-100 text-gray-500";
+    }
+  };
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h2 className="text-2xl font-black text-gray-900">Booking Requests</h2>
+          <p className="text-sm text-gray-500 font-medium">
+            Approve, reject, or reopen buyer requests before payment.
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Confirmed Revenue
+            </p>
+            <p className="text-xl font-black text-blue-600">
+              ₹{confirmedRevenue.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-8 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Client
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Hoarding
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Duration
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Amount
+                </th>
+                <th className="px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Status
+                </th>
+                <th className="px-8 py-5 text-right text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {bookings.map((booking) => {
+                const isUpdating = bookingActionId === booking._id;
+
+                return (
+                  <tr key={booking._id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                          {booking.user?.name?.[0] || "?"}
+                        </div>
+                        <div>
+                          <p className="text-sm font-extrabold text-gray-900">
+                            {booking.user?.name || "Client"}
+                          </p>
+                          <p className="text-[10px] font-medium text-gray-400 truncate max-w-[170px]">
+                            {booking.user?.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <p className="text-sm font-bold text-gray-800">
+                        {booking.hoarding?.name || "N/A"}
+                      </p>
+                      <p className="text-[10px] font-medium text-gray-400">
+                        {booking.hoarding?.location.city}
+                      </p>
+                    </td>
+                    <td className="px-6 py-6 font-medium text-xs text-gray-600">
+                      {new Date(booking.startDate).toLocaleDateString()} -{" "}
+                      {new Date(booking.endDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-6">
+                      <p className="text-sm font-black text-gray-900">
+                        ₹{booking.totalAmount.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {booking.status === "confirmed" ? "Paid" : "Awaiting payment"}
+                      </p>
+                    </td>
+                    <td className="px-6 py-6">
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${getStatusClasses(
+                          booking.status,
+                        )}`}
+                      >
+                        {booking.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {booking.status === "requested" && (
+                          <>
+                            {booking.hoarding?._id && (
+                              <Link
+                                href={`/hoardings/${booking.hoarding._id}`}
+                                className="px-3 py-2 rounded-xl bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
+                              >
+                                View Listing
+                              </Link>
+                            )}
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => onUpdateStatus(booking._id, "approved")}
+                              className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => onUpdateStatus(booking._id, "rejected")}
+                              className="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {booking.status === "approved" && (
+                          <>
+                            {booking.hoarding?._id && (
+                              <Link
+                                href={`/hoardings/${booking.hoarding._id}`}
+                                className="px-3 py-2 rounded-xl bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
+                              >
+                                View Listing
+                              </Link>
+                            )}
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => onUpdateStatus(booking._id, "rejected")}
+                              className="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                            <span className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+                              Buyer Can Pay
+                            </span>
+                          </>
+                        )}
+                        {booking.status === "rejected" && (
+                          <>
+                            {booking.hoarding?._id && (
+                              <Link
+                                href={`/hoardings/${booking.hoarding._id}`}
+                                className="px-3 py-2 rounded-xl bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
+                              >
+                                View Listing
+                              </Link>
+                            )}
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => onUpdateStatus(booking._id, "requested")}
+                              className="px-3 py-2 rounded-xl bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              Reopen
+                            </button>
+                          </>
+                        )}
+                        {booking.status === "confirmed" && (
+                          <>
+                            {booking.hoarding?._id && (
+                              <Link
+                                href={`/hoardings/${booking.hoarding._id}`}
+                                className="px-3 py-2 rounded-xl bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
+                              >
+                                View Listing
+                              </Link>
+                            )}
+                            <span className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                              Payment Complete
+                            </span>
+                          </>
+                        )}
+                        {booking.status === "cancelled" && (
+                          <>
+                            {booking.hoarding?._id && (
+                              <Link
+                                href={`/hoardings/${booking.hoarding._id}`}
+                                className="px-3 py-2 rounded-xl bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
+                              >
+                                View Listing
+                              </Link>
+                            )}
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                              Cancelled
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {bookings.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                        <BadgeCheck className="text-gray-200" size={32} />
+                      </div>
+                      <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                        No booking requests yet
+                      </p>
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>

@@ -54,8 +54,13 @@ interface Booking {
   startDate: string;
   endDate: string;
   totalAmount: number;
-  status: "pending" | "confirmed" | "cancelled";
-  orderId: string;
+  status:
+    | "requested"
+    | "approved"
+    | "rejected"
+    | "confirmed"
+    | "cancelled";
+  orderId?: string;
   paymentId?: string;
   createdAt: string;
 }
@@ -105,7 +110,26 @@ interface NotificationItem {
   text: string;
   timestamp: string;
   isRead: boolean;
+  bookingId?: string;
+  hoardingId?: string;
 }
+
+const getBookingStatusClasses = (status: Booking["status"]) => {
+  switch (status) {
+    case "confirmed":
+      return "bg-green-50 text-green-600";
+    case "approved":
+      return "bg-blue-50 text-blue-600";
+    case "requested":
+      return "bg-amber-50 text-amber-600";
+    case "rejected":
+      return "bg-red-50 text-red-600";
+    case "cancelled":
+      return "bg-gray-100 text-gray-500";
+    default:
+      return "bg-gray-100 text-gray-500";
+  }
+};
 
 export default function BuyerDashboard() {
   const router = useRouter();
@@ -126,9 +150,11 @@ export default function BuyerDashboard() {
   // Additional dynamic data
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [chatMessage, setChatMessage] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const getMessageParty = (
@@ -157,10 +183,86 @@ export default function BuyerDashboard() {
       isRead: msg.status === "read",
     }));
 
-  const unreadCount = adminNotifications.filter((n) => !n.isRead).length;
+  const bookingNotifications: NotificationItem[] = notifications.map((item) => ({
+    id: item._id,
+    text: item.content,
+    timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString() : "Just now",
+    isRead: item.status === "read",
+    bookingId: item.metadata?.bookingId,
+    hoardingId: item.metadata?.hoardingId,
+  }));
+
+  const allNotifications = [...bookingNotifications, ...adminNotifications].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+  const unreadCount = allNotifications.filter((n) => !n.isRead).length;
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const matchesBuyerSearch = (value: string) =>
+    !normalizedSearchQuery || value.toLowerCase().includes(normalizedSearchQuery);
+
+  const filteredBookings = bookings.filter((booking) =>
+    matchesBuyerSearch(
+      [
+        booking.hoarding?.name ?? "",
+        booking.hoarding?.location.city ?? "",
+        booking.hoarding?.location.state ?? "",
+        booking.hoarding?.location.address ?? "",
+        booking.status,
+        booking.startDate,
+        booking.endDate,
+        String(booking.totalAmount ?? ""),
+      ].join(" "),
+    ),
+  );
+
+  const filteredActiveBookings = activeBookings.filter((booking) =>
+    matchesBuyerSearch(
+      [
+        booking.hoarding?.name ?? "",
+        booking.hoarding?.location.city ?? "",
+        booking.hoarding?.location.state ?? "",
+        booking.hoarding?.location.address ?? "",
+        booking.status,
+        booking.startDate,
+        booking.endDate,
+        String(booking.totalAmount ?? ""),
+      ].join(" "),
+    ),
+  );
+
+  const filteredWishlist = wishlist.filter((item) =>
+    matchesBuyerSearch(
+      [
+        item.name,
+        item.location.city,
+        item.location.state,
+        item.location.address,
+        String(item.pricePerMonth ?? ""),
+      ].join(" "),
+    ),
+  );
 
   const markRead = async (id: string) => {
     try {
+      const notification = notifications.find((item) => item._id === id);
+      if (notification) {
+        const res = await fetchWithAuth("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notificationIds: [id] }),
+        });
+
+        if (res.ok) {
+          setNotifications((prev) =>
+            prev.map((item) =>
+              item._id === id ? { ...item, status: "read" } : item,
+            ),
+          );
+        }
+        return;
+      }
+
       const res = await fetchWithAuth("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -181,6 +283,20 @@ export default function BuyerDashboard() {
 
   const markAllAsRead = async () => {
     try {
+      if (notifications.some((item) => item.status !== "read")) {
+        const notificationRes = await fetchWithAuth("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markAll: true }),
+        });
+
+        if (notificationRes.ok) {
+          setNotifications((prev) =>
+            prev.map((item) => ({ ...item, status: "read" })),
+          );
+        }
+      }
+
       const res = await fetchWithAuth("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -252,6 +368,12 @@ export default function BuyerDashboard() {
           setWishlist(data.wishlist.hoardings || []);
         }
 
+        const notificationsRes = await fetchWithAuth("/api/notifications");
+        if (notificationsRes.ok) {
+          const data = await notificationsRes.json();
+          setNotifications(data.notifications || []);
+        }
+
         // Fetch Messages
         const messagesRes = await fetchWithAuth("/api/messages");
         console.log("[BuyerDashboard] Fetch Messages Status:", messagesRes.status);
@@ -272,6 +394,7 @@ export default function BuyerDashboard() {
     // Polling for updates
     const pollInterval = setInterval(() => {
       fetchMessages();
+      fetchNotifications();
     }, 4000);
 
     return () => clearInterval(pollInterval);
@@ -286,6 +409,18 @@ export default function BuyerDashboard() {
       }
     } catch (error) {
       console.error("[BuyerDashboard] Polling Error:", error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetchWithAuth("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (error) {
+      console.error("[BuyerDashboard] Notification polling error:", error);
     }
   };
 
@@ -420,6 +555,8 @@ export default function BuyerDashboard() {
               />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search campaigns, dates, locations..."
                 className="pl-11 pr-6 py-2.5 bg-white border-2 border-blue-500 rounded-none w-96 text-sm focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-slate-900 font-bold placeholder-slate-400"
               />
@@ -449,8 +586,8 @@ export default function BuyerDashboard() {
                     )}
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
-                    {adminNotifications.length > 0 ? (
-                      adminNotifications.map((notif) => (
+                    {allNotifications.length > 0 ? (
+                      allNotifications.map((notif) => (
                         <div 
                           key={notif.id}
                           className={`group relative cursor-pointer border-l-4 px-5 py-4 transition-all duration-300 hover:bg-gray-50 ${notif.isRead ? 'border-transparent opacity-60' : 'border-blue-500 bg-blue-50/5'}`}
@@ -479,7 +616,7 @@ export default function BuyerDashboard() {
                       </div>
                     )}
                   </div>
-                  {adminNotifications.length > 0 && unreadCount > 0 && (
+                  {allNotifications.length > 0 && unreadCount > 0 && (
                     <div className="mt-2 px-5 pt-3 border-t border-gray-50">
                       <button 
                         onClick={markAllAsRead}
@@ -577,7 +714,7 @@ export default function BuyerDashboard() {
                     </button>
                   </div>
                   <div className="space-y-4">
-                    {activeBookings.slice(0, 3).map((booking) => (
+                    {filteredActiveBookings.slice(0, 3).map((booking) => (
                       <div
                         key={booking._id}
                         className="p-4 bg-gray-50/50 rounded-2xl flex items-center gap-6 border border-transparent hover:border-blue-100 transition-all"
@@ -607,7 +744,7 @@ export default function BuyerDashboard() {
                         </div>
                       </div>
                     ))}
-                    {activeBookings.length === 0 && <p className="text-center py-10 text-gray-400 font-medium">No active campaigns</p>}
+                    {filteredActiveBookings.length === 0 && <p className="text-center py-10 text-gray-400 font-medium">No matching active campaigns</p>}
                   </div>
                 </div>
 
@@ -644,7 +781,7 @@ export default function BuyerDashboard() {
                 Your Campaigns
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {bookings.map((booking) => (
+                {filteredBookings.map((booking) => (
                   <div
                     key={booking._id}
                     className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden hover:shadow-2xl transition-all p-6 group"
@@ -670,23 +807,52 @@ export default function BuyerDashboard() {
                             ₹{booking.totalAmount.toLocaleString()}
                           </p>
                           <span
-                            className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${
-                              booking.status === "confirmed"
-                                ? "bg-green-50 text-green-600"
-                                : "bg-amber-50 text-amber-600"
-                            }`}
+                            className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${getBookingStatusClasses(booking.status)}`}
                           >
                             {booking.status}
                           </span>
                         </div>
+                        <p className="text-[11px] font-medium text-gray-400">
+                          {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3 pt-3">
+                          {booking.hoarding?._id && (
+                            <Link
+                              href={`/hoardings/${booking.hoarding._id}`}
+                              className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors"
+                            >
+                              View Listing
+                            </Link>
+                          )}
+                          {booking.status === "approved" && booking.hoarding?._id && (
+                            <Link
+                              href={`/bookings/${booking.hoarding._id}?bookingId=${booking._id}&start=${encodeURIComponent(booking.startDate)}&end=${encodeURIComponent(booking.endDate)}`}
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors"
+                            >
+                              Pay Now
+                              <ArrowRight size={12} />
+                            </Link>
+                          )}
+                        </div>
+                        <p className="text-[11px] font-medium text-gray-500">
+                          {booking.status === "requested" && "Waiting for vendor approval before payment is enabled."}
+                          {booking.status === "approved" && "Vendor approved this request. You can now pay to confirm it."}
+                          {booking.status === "rejected" && "Vendor rejected this request. It may reopen if they change their decision."}
+                          {booking.status === "confirmed" && "Payment completed and your campaign is confirmed."}
+                          {booking.status === "cancelled" && "This booking is no longer active."}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))}
-                {bookings.length === 0 && (
+                {filteredBookings.length === 0 && (
                    <div className="md:col-span-2 text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
                       <Package size={48} className="mx-auto text-gray-300 mb-4" />
-                      <p className="text-gray-500 font-bold">You haven&apos;t booked any campaigns yet</p>
+                      <p className="text-gray-500 font-bold">
+                        {searchQuery.trim()
+                          ? "No campaigns match your search"
+                          : "You haven&apos;t booked any campaigns yet"}
+                      </p>
                       <Link href="/" className="mt-4 inline-block text-blue-600 font-bold hover:underline">Start Exploring</Link>
                    </div>
                 )}
@@ -698,7 +864,7 @@ export default function BuyerDashboard() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-8">
                <h2 className="text-4xl font-black text-gray-900 tracking-tight">Saved for Later</h2>
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {wishlist.map((item) => (
+                  {filteredWishlist.map((item) => (
                     <div key={item._id} className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden group">
                        <div className="h-48 relative overflow-hidden">
                           <img src={item.images[0] || "/placeholder.jpg"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -716,7 +882,7 @@ export default function BuyerDashboard() {
                           </p>
                           <div className="pt-4 flex items-center justify-between border-t border-gray-50">
                              <p className="text-lg font-black text-gray-900">₹{item.pricePerMonth.toLocaleString()}<span className="text-xs font-normal text-gray-400">/mo</span></p>
-                             <Link href={`/bookings/${item._id}`} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                             <Link href={`/hoardings/${item._id}`} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
                                 <ArrowUpRight size={18}/>
                              </Link>
                           </div>
@@ -724,10 +890,12 @@ export default function BuyerDashboard() {
                     </div>
                   ))}
                </div>
-               {wishlist.length === 0 && (
+               {filteredWishlist.length === 0 && (
                  <div className="text-center pt-20">
                     <Heart size={80} className="mx-auto text-gray-200 mb-6" />
-                    <p className="text-gray-400 font-bold text-lg">Your Wishlist is Empty</p>
+                    <p className="text-gray-400 font-bold text-lg">
+                      {searchQuery.trim() ? "No wishlist items match your search" : "Your Wishlist is Empty"}
+                    </p>
                     <Link href="/" className="mt-8 inline-block bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold hover:scale-105 transition-transform shadow-xl shadow-blue-100">Find Locations</Link>
                  </div>
                )}

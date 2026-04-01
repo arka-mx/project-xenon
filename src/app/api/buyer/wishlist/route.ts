@@ -76,19 +76,31 @@ export async function POST(req: Request) {
     }
 
     let wishlist = await Wishlist.findOne({ user: decoded.userId });
+    let alreadySaved = false;
     if (!wishlist) {
       wishlist = await Wishlist.create({
         user: decoded.userId,
         hoardings: [hoardingId],
       });
     } else {
-      if (!wishlist.hoardings.includes(hoardingId)) {
+      const exists = wishlist.hoardings.some(
+        (id: any) => id.toString() === hoardingId,
+      );
+      if (!exists) {
         wishlist.hoardings.push(hoardingId);
         await wishlist.save();
+      } else {
+        alreadySaved = true;
       }
     }
 
-    return NextResponse.json({ message: "Added to wishlist", wishlist });
+    return NextResponse.json({
+      message: alreadySaved
+        ? "This listing is already in your wishlist."
+        : "Listing added to your wishlist.",
+      wishlist,
+      alreadySaved,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

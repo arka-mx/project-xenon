@@ -8,9 +8,14 @@ export interface IBooking extends Document {
   totalAmount: number;
   platformFee: number;
   vendorAmount: number;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status:
+    | 'requested'
+    | 'approved'
+    | 'rejected'
+    | 'confirmed'
+    | 'cancelled';
   paymentId?: string;
-  orderId: string;
+  orderId?: string;
   createdAt: Date;
 }
 
@@ -22,10 +27,38 @@ const BookingSchema: Schema<IBooking> = new Schema({
   totalAmount: { type: Number, required: true },
   platformFee: { type: Number, default: 0 },
   vendorAmount: { type: Number, default: 0 },
-  status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' },
+  status: {
+    type: String,
+    enum: ['requested', 'approved', 'rejected', 'confirmed', 'cancelled'],
+    default: 'requested',
+  },
   paymentId: { type: String },
-  orderId: { type: String, required: true },
+  orderId: { type: String },
 }, { timestamps: true });
 
-const Booking = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
-export default Booking;
+const Booking =
+  (mongoose.models.Booking as mongoose.Model<IBooking> | undefined) ||
+  mongoose.model<IBooking>('Booking', BookingSchema);
+
+if (
+  mongoose.models.Booking &&
+  mongoose.models.Booking.schema.path("status")?.instance === "String"
+) {
+  const statusPath = mongoose.models.Booking.schema.path("status") as
+    | mongoose.SchemaType
+    | undefined;
+  const orderIdPath = mongoose.models.Booking.schema.path("orderId") as
+    | mongoose.SchemaType
+    | undefined;
+  const statusEnum = (statusPath?.options?.enum as string[] | undefined) || [];
+  const orderIdRequired = Boolean(orderIdPath?.options?.required);
+
+  if (!statusEnum.includes("requested") || orderIdRequired) {
+    delete mongoose.models.Booking;
+  }
+}
+
+const FreshBooking =
+  (mongoose.models.Booking as mongoose.Model<IBooking> | undefined) ||
+  mongoose.model<IBooking>("Booking", BookingSchema);
+export default FreshBooking;

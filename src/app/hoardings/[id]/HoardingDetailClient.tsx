@@ -19,7 +19,6 @@ import {
   Loader2
 } from "lucide-react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
-import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 
 interface HoardingDetailClientProps {
@@ -33,14 +32,21 @@ const mapContainerStyle = {
 };
 
 export default function HoardingDetailClient({ hoarding }: HoardingDetailClientProps) {
-  const router = useRouter();
   const [selectedDates, setSelectedDates] = useState({ start: "", end: "" });
   const [blockedDates, setBlockedDates] = useState<any[]>([]);
   const [dateError, setDateError] = useState("");
   const [bookRoleMessage, setBookRoleMessage] = useState("");
+  const [bookSuccessMessage, setBookSuccessMessage] = useState("");
+  const [bookingRequestLoading, setBookingRequestLoading] = useState(false);
   const [wishlistRoleMessage, setWishlistRoleMessage] = useState("");
+  const [wishlistSuccessMessage, setWishlistSuccessMessage] = useState("");
   const [enquiryRoleMessage, setEnquiryRoleMessage] = useState("");
+  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+  const [enquiryText, setEnquiryText] = useState("");
+  const [enquirySuccessMessage, setEnquirySuccessMessage] = useState("");
+  const [sendingEnquiry, setSendingEnquiry] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserKycStatus, setCurrentUserKycStatus] = useState<string | null>(null);
   const browserMapsApiKey =
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || "";
   const [mapsLoadFailed, setMapsLoadFailed] = useState(false);
@@ -57,6 +63,8 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
         (basePricePerMonth * razorpayPercent) / 100 +
         (basePricePerMonth * gstPercent) / 100,
     );
+  const isBuyerKycVerified =
+    currentUserKycStatus === "approved" || currentUserKycStatus === "verified";
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -65,6 +73,7 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
         if (!res.ok) return;
         const data = await res.json();
         setCurrentUserRole(data.user?.role || null);
+        setCurrentUserKycStatus(data.user?.kycStatus || null);
       } catch (error) {
         console.error("Failed to load current user", error);
       }
@@ -161,36 +170,159 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
     setSelectedDates(newDates);
   };
 
-  const handleBookNow = () => {
+  const handleBookNow = async () => {
     if (currentUserRole && currentUserRole !== "buyer") {
+      setBookSuccessMessage("");
       setBookRoleMessage("Only buyers can book hoardings.");
       return;
     }
 
+    if (currentUserRole === "buyer" && !isBuyerKycVerified) {
+      setBookSuccessMessage("");
+      setBookRoleMessage("Complete and verify your KYC before booking hoardings.");
+      return;
+    }
+
+    if (!selectedDates.start || !selectedDates.end) {
+      setBookSuccessMessage("");
+      setBookRoleMessage("Please select campaign dates.");
+      return;
+    }
+
     setBookRoleMessage("");
+    setBookSuccessMessage("");
     if (!validateDates(selectedDates.start, selectedDates.end)) return;
-    const query = new URLSearchParams(selectedDates).toString();
-    router.push(`/bookings/${hoarding._id}?${query}`);
+
+    setBookingRequestLoading(true);
+    try {
+      const res = await fetchWithAuth("/api/bookings/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hoardingId: hoarding._id,
+          startDate: selectedDates.start,
+          endDate: selectedDates.end,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        setBookRoleMessage("Please log in as a buyer to send a booking request.");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send booking request.");
+      }
+
+      setBookSuccessMessage(
+        data.message || "Booking request sent to vendor. You can pay after approval.",
+      );
+    } catch (error: any) {
+      setBookRoleMessage(
+        error?.message || "Failed to send booking request.",
+      );
+    } finally {
+      setBookingRequestLoading(false);
+    }
   };
 
   const handleAddToWishlist = () => {
     if (currentUserRole && currentUserRole !== "buyer") {
+      setWishlistSuccessMessage("");
       setWishlistRoleMessage("Only buyers can add hoardings to wishlist.");
       return;
     }
 
-    setWishlistRoleMessage("");
-    router.push(`/bookings/${hoarding._id}`);
+    const saveToWishlist = async () => {
+      setWishlistRoleMessage("");
+      setWishlistSuccessMessage("");
+
+      try {
+        const res = await fetchWithAuth("/api/buyer/wishlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hoardingId: hoarding._id }),
+        });
+
+        const data = await res.json();
+
+        if (res.status === 401) {
+          setWishlistRoleMessage("Please log in as a buyer to save this listing.");
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to add listing to wishlist.");
+        }
+
+        setWishlistSuccessMessage(
+          data.message || "Listing added to your wishlist.",
+        );
+      } catch (error: any) {
+        setWishlistRoleMessage(
+          error.message || "Failed to add listing to wishlist.",
+        );
+      }
+    };
+
+    void saveToWishlist();
   };
 
   const handleEnquireNow = () => {
     if (currentUserRole && currentUserRole !== "buyer") {
+      setEnquirySuccessMessage("");
       setEnquiryRoleMessage("Only buyers can enquire about hoardings.");
       return;
     }
 
     setEnquiryRoleMessage("");
-    router.push(`/bookings/${hoarding._id}`);
+    setEnquirySuccessMessage("");
+    setEnquiryText(
+      `Hi, I want to enquire about "${hoarding.name}" (${hoarding.hoardingCode || hoarding._id}) in ${hoarding.location.city}.`,
+    );
+    setIsEnquiryModalOpen(true);
+  };
+
+  const handleSendEnquiry = async () => {
+    if (!enquiryText.trim()) {
+      setEnquiryRoleMessage("Please enter your message for the admin.");
+      return;
+    }
+
+    setSendingEnquiry(true);
+    setEnquiryRoleMessage("");
+    setEnquirySuccessMessage("");
+
+    try {
+      const res = await fetchWithAuth("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `${enquiryText.trim()}\n\nListing: ${hoarding.name}\nListing ID: ${hoarding._id}\nCity: ${hoarding.location.city}`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401) {
+        setEnquiryRoleMessage("Please log in as a buyer to send an enquiry.");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send enquiry.");
+      }
+
+      setEnquirySuccessMessage("Your enquiry has been sent to the admin.");
+      setEnquiryText("");
+      setIsEnquiryModalOpen(false);
+    } catch (error: any) {
+      setEnquiryRoleMessage(error.message || "Failed to send enquiry.");
+    } finally {
+      setSendingEnquiry(false);
+    }
   };
 
   const handleShare = () => {
@@ -334,6 +466,18 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
                 </div>
               )}
 
+              {currentUserRole === "buyer" && !isBuyerKycVerified && (
+                <div className="p-3 bg-amber-50 text-amber-700 text-xs rounded-lg font-medium">
+                  Complete and verify your KYC before sending a booking request.
+                </div>
+              )}
+
+              {bookSuccessMessage && (
+                <div className="p-3 bg-green-50 text-green-700 text-xs rounded-lg font-medium">
+                  {bookSuccessMessage}
+                </div>
+              )}
+
               {blockedDates.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Already Booked:</span>
@@ -350,10 +494,16 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
 
               <button 
                 onClick={handleBookNow}
-                disabled={!!dateError || !selectedDates.start || !selectedDates.end}
+                disabled={
+                  bookingRequestLoading ||
+                  (currentUserRole === "buyer" && !isBuyerKycVerified) ||
+                  !!dateError ||
+                  !selectedDates.start ||
+                  !selectedDates.end
+                }
                 className="w-full bg-[#2563eb] text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Book
+                {bookingRequestLoading ? "Sending Request..." : "Book"}
               </button>
             </div>
           </div>
@@ -377,6 +527,11 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
                     {wishlistRoleMessage}
                   </div>
                 )}
+                {wishlistSuccessMessage && (
+                  <div className="p-3 bg-green-50 text-green-700 text-xs rounded-lg font-medium">
+                    {wishlistSuccessMessage}
+                  </div>
+                )}
                 <button
                   onClick={handleAddToWishlist}
                   className="w-full bg-[#2563eb] text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
@@ -386,6 +541,11 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
                 {enquiryRoleMessage && (
                   <div className="p-3 bg-amber-50 text-amber-700 text-xs rounded-lg font-medium">
                     {enquiryRoleMessage}
+                  </div>
+                )}
+                {enquirySuccessMessage && (
+                  <div className="p-3 bg-green-50 text-green-700 text-xs rounded-lg font-medium">
+                    {enquirySuccessMessage}
                   </div>
                 )}
                 <button
@@ -462,6 +622,53 @@ export default function HoardingDetailClient({ hoarding }: HoardingDetailClientP
           </div>
         </div>
       </div>
+
+      {isEnquiryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Enquire About This Listing
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Send a message to admin about{" "}
+                  <span className="font-semibold text-gray-800">
+                    {hoarding.name}
+                  </span>
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEnquiryModalOpen(false)}
+                className="rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <textarea
+              value={enquiryText}
+              onChange={(e) => setEnquiryText(e.target.value)}
+              rows={6}
+              placeholder="Write your question about this listing..."
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-[#2563eb]"
+            />
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleSendEnquiry}
+                disabled={sendingEnquiry}
+                className="rounded-xl bg-[#2563eb] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {sendingEnquiry ? "Sending..." : "Send Enquiry"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

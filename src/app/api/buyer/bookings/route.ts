@@ -41,8 +41,8 @@ export async function GET() {
         const stats = {
             total: bookings.length,
             confirmed: bookings.filter(b => b.status === 'confirmed').length,
-            pending: bookings.filter(b => b.status === 'pending').length,
-            cancelled: bookings.filter(b => b.status === 'cancelled').length,
+            pending: bookings.filter(b => ['requested', 'approved'].includes(b.status)).length,
+            cancelled: bookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).length,
             totalSpent: bookings
                 .filter(b => b.status === 'confirmed')
                 .reduce((sum, b) => sum + b.totalAmount, 0)
@@ -51,10 +51,10 @@ export async function GET() {
         // Separate active and past bookings
         const now = new Date();
         const activeBookings = bookings.filter(b =>
-            new Date(b.endDate) >= now && b.status !== 'cancelled'
+            new Date(b.endDate) >= now && ['requested', 'approved', 'confirmed'].includes(b.status)
         );
         const pastBookings = bookings.filter(b =>
-            new Date(b.endDate) < now || b.status === 'cancelled'
+            new Date(b.endDate) < now || ['cancelled', 'rejected'].includes(b.status)
         );
 
         return NextResponse.json({

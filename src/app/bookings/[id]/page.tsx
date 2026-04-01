@@ -46,12 +46,17 @@ export default function BookingPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [wishlistMsg, setWishlistMsg] = useState("");
   const [enquiryMsg, setEnquiryMsg] = useState("");
+  const [selectedBookingId, setSelectedBookingId] = useState("");
+  const isBuyerKycVerified =
+    user?.kycStatus === "approved" || user?.kycStatus === "verified";
 
   useEffect(() => {
     const start = searchParams.get("start");
     const end = searchParams.get("end");
+    const bookingId = searchParams.get("bookingId");
     if (start) setStartDate(start);
     if (end) setEndDate(end);
+    if (bookingId) setSelectedBookingId(bookingId);
   }, [searchParams]);
 
   useEffect(() => {
@@ -220,9 +225,20 @@ export default function BookingPage() {
 
   const pricing = calculatePricing();
 
-  const handlePayment = async () => {
+  const handleBookingAction = async () => {
     if (user?.role !== "buyer") {
       setError("Only buyers can book hoardings.");
+      setSuccessMsg("");
+      setWishlistMsg("");
+      return;
+    }
+
+    if (!isBuyerKycVerified) {
+      setError(
+        selectedBookingId
+          ? "Complete and verify your KYC before making payments."
+          : "Complete and verify your KYC before booking hoardings.",
+      );
       setSuccessMsg("");
       setWishlistMsg("");
       return;
@@ -240,10 +256,28 @@ export default function BookingPage() {
     setError("");
 
     try {
+      if (!selectedBookingId) {
+        const requestRes = await fetchWithAuth("/api/bookings/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hoardingId: id, startDate, endDate }),
+        });
+
+        const requestData = await requestRes.json();
+        if (!requestRes.ok) throw new Error(requestData.error);
+
+        setSuccessMsg(
+          requestData.message || "Booking request sent to vendor.",
+        );
+        setSelectedBookingId(requestData.bookingId || "");
+        setProcessing(false);
+        return;
+      }
+
       const res = await fetchWithAuth("/api/bookings/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hoardingId: id, startDate, endDate }),
+        body: JSON.stringify({ bookingId: selectedBookingId }),
       });
 
       const data = await res.json();
@@ -563,6 +597,14 @@ export default function BookingPage() {
                 </div>
               )}
 
+              {user?.role === "buyer" && !isBuyerKycVerified && (
+                <div className="p-4 text-xs font-bold rounded-2xl border bg-amber-50 text-amber-700 border-amber-100">
+                  {selectedBookingId
+                    ? "Complete and verify your KYC before making payment."
+                    : "Complete and verify your KYC before sending a booking request."}
+                </div>
+              )}
+
               {blockedDates.length > 0 && (
                 <div className="space-y-3 bg-gray-50/50 p-6 rounded-[25px] border border-gray-100">
                   <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Already Booked Dates</h4>
@@ -582,14 +624,14 @@ export default function BookingPage() {
               )}
 
               <button
-                onClick={handlePayment}
-                disabled={processing}
+                onClick={handleBookingAction}
+                disabled={processing || (user?.role === "buyer" && !isBuyerKycVerified)}
                 className="w-full bg-blue-600 text-white py-5 rounded-[22px] font-black text-lg shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all"
               >
                 {processing ? (
                   <Loader2 className="animate-spin mx-auto" />
                 ) : (
-                  "Book Now"
+                  selectedBookingId ? "Pay Now" : "Send Booking Request"
                 )}
               </button>
 
