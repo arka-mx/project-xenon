@@ -264,6 +264,20 @@ export default function EditHoardingPage() {
     setSuccess("");
 
     try {
+      if (!data.pricePerMonth || data.pricePerMonth < 1) {
+        throw new Error("Price per month is required.");
+      }
+
+      if (
+        typeof data.latitude !== "number" ||
+        typeof data.longitude !== "number" ||
+        Number.isNaN(data.latitude) ||
+        Number.isNaN(data.longitude)
+      ) {
+        setShowMap(true);
+        throw new Error("Please pin the hoarding on the map before updating.");
+      }
+
       const res = await fetchWithAuth(`/api/hoardings/${id}`, {
         method: "PUT",
         headers: {
@@ -403,6 +417,18 @@ export default function EditHoardingPage() {
 
               {showMap && (
                 <MapLocationPicker onLocationSelect={handleMapLocationSelect} />
+              )}
+
+              <input type="hidden" {...register("latitude", { valueAsNumber: true })} />
+              <input type="hidden" {...register("longitude", { valueAsNumber: true })} />
+
+              <p className="text-xs text-gray-500">
+                Price and map pin are required to update this listing.
+              </p>
+              {(errors.latitude || errors.longitude) && (
+                <p className="text-xs text-red-500">
+                  Pin the hoarding on the map before updating.
+                </p>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -568,6 +594,7 @@ export default function EditHoardingPage() {
                     <input
                       {...register("pricePerMonth", { valueAsNumber: true })}
                       type="number"
+                      min="1"
                       placeholder="0.00"
                       className="w-full pl-9 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563eb] outline-none"
                     />

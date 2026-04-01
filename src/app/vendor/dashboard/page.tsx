@@ -72,6 +72,7 @@ interface Booking {
   status: "requested" | "approved" | "rejected" | "confirmed" | "cancelled";
   paymentId?: string;
   orderId?: string;
+  paidAt?: string;
   createdAt: string;
 }
 
@@ -154,6 +155,8 @@ export default function VendorDashboard() {
   const [showMap, setShowMap] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dailyReminderRead, setDailyReminderRead] = useState(false);
+  const [showCalendarReminderPopup, setShowCalendarReminderPopup] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const canAddHoarding =
     userData?.kycStatus === "approved" || userData?.kycStatus === "verified";
@@ -162,6 +165,14 @@ export default function VendorDashboard() {
     party?: string | { _id: string; role?: string; name?: string } | null,
   ) => (typeof party === "string" ? { _id: party } : party);
   const currentUserId = userData?._id || userData?.id;
+  const todayReminderKey =
+    currentUserId
+      ? `vendor-calendar-reminder-read-${currentUserId}-${new Date().toLocaleDateString("en-CA")}`
+      : null;
+  const todayReminderPopupKey =
+    currentUserId
+      ? `vendor-calendar-reminder-popup-${currentUserId}-${new Date().toLocaleDateString("en-CA")}`
+      : null;
 
   const notifications = messages
     .filter((msg) => {
@@ -182,12 +193,35 @@ export default function VendorDashboard() {
       timestamp: msg.createdAt
         ? new Date(msg.createdAt).toLocaleString()
         : "Just now",
+      isReminder: false,
     }));
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const combinedNotifications = [
+    ...(currentUserId && hoardings.length > 0
+      ? [
+          {
+            id: todayReminderKey || "daily-calendar-reminder",
+            text:
+              "Daily reminder: if you close any hoarding offline, update its calendar here so buyers cannot book those dates online.",
+            isRead: dailyReminderRead,
+            timestamp: "Today",
+            isReminder: true,
+          },
+        ]
+      : []),
+    ...notifications,
+  ];
+
+  const unreadCount = combinedNotifications.filter((n) => !n.isRead).length;
 
   const markRead = async (id: string) => {
     try {
+      if (todayReminderKey && id === todayReminderKey) {
+        localStorage.setItem(todayReminderKey, "read");
+        setDailyReminderRead(true);
+        return;
+      }
+
       const res = await fetchWithAuth("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -208,6 +242,11 @@ export default function VendorDashboard() {
 
   const markAllAsRead = async () => {
     try {
+      if (todayReminderKey) {
+        localStorage.setItem(todayReminderKey, "read");
+        setDailyReminderRead(true);
+      }
+
       const res = await fetchWithAuth("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -227,6 +266,27 @@ export default function VendorDashboard() {
     } catch (error) {
       console.error("Failed to mark all notifications as read", error);
     }
+  };
+
+  useEffect(() => {
+    if (!todayReminderKey) return;
+    setDailyReminderRead(localStorage.getItem(todayReminderKey) === "read");
+  }, [todayReminderKey]);
+
+  useEffect(() => {
+    if (!todayReminderPopupKey || !currentUserId || hoardings.length === 0) return;
+
+    const popupAlreadyShown = localStorage.getItem(todayReminderPopupKey) === "shown";
+    if (!popupAlreadyShown) {
+      setShowCalendarReminderPopup(true);
+      localStorage.setItem(todayReminderPopupKey, "shown");
+    }
+  }, [todayReminderPopupKey, currentUserId, hoardings.length]);
+
+  const handleOpenCalendarReminder = () => {
+    setShowCalendarReminderPopup(false);
+    setShowNotifications(false);
+    setActiveTab("listings");
   };
 
   useEffect(() => {
@@ -463,6 +523,22 @@ export default function VendorDashboard() {
         uniqueFootfall: Number(newHoarding.uniqueFootfall) || 0,
       };
 
+      if (!cleanedHoarding.pricePerMonth || cleanedHoarding.pricePerMonth < 1) {
+        alert("Price per month is required.");
+        return;
+      }
+
+      if (
+        typeof cleanedHoarding.latitude !== "number" ||
+        typeof cleanedHoarding.longitude !== "number" ||
+        Number.isNaN(cleanedHoarding.latitude) ||
+        Number.isNaN(cleanedHoarding.longitude) ||
+        (cleanedHoarding.latitude === 0 && cleanedHoarding.longitude === 0)
+      ) {
+        alert("Please pin the listing on the map.");
+        return;
+      }
+
       const res = await fetchWithAuth("/api/hoardings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -481,6 +557,8 @@ export default function VendorDashboard() {
           area: "",
           state: "",
           zipCode: "",
+          latitude: 0,
+          longitude: 0,
           width: 0,
           height: 0,
           type: "Billboard",
@@ -802,10 +880,15 @@ export default function VendorDashboard() {
                     )}
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      notifications.map((notif) => (
+                    {combinedNotifications.length > 0 ? (
+                      combinedNotifications.map((notif) => (
                         <div 
                           key={notif.id}
+                          onClick={() => {
+                            if (notif.isReminder) {
+                              handleOpenCalendarReminder();
+                            }
+                          }}
                           className={`group relative cursor-pointer border-l-4 px-5 py-4 transition-all duration-300 hover:bg-gray-50 ${notif.isRead ? 'border-transparent opacity-60' : 'border-blue-500 bg-blue-50/5'}`}
                         >
                           <p className={`text-xs font-bold leading-tight ${notif.isRead ? 'text-gray-500' : 'text-gray-900'}`}>
@@ -832,7 +915,7 @@ export default function VendorDashboard() {
                       </div>
                     )}
                   </div>
-                  {notifications.length > 0 && unreadCount > 0 && (
+                    {combinedNotifications.length > 0 && unreadCount > 0 && (
                     <div className="mt-2 px-5 pt-3 border-t border-gray-50">
                       <button 
                         onClick={markAllAsRead}
@@ -951,9 +1034,13 @@ export default function VendorDashboard() {
                       onClick={() => setShowMap(!showMap)}
                       className="text-[10px] font-black text-blue-600 uppercase hover:underline flex items-center gap-1"
                     >
-                      <MapPin size={12} /> {showMap ? "Hide Map" : "Pin on Map"}
+                      <MapPin size={12} /> {showMap ? "Hide Map" : "Pin on Map *"}
                     </button>
                   </div>
+
+                  <p className="text-[10px] font-bold text-gray-400 px-1">
+                    Price and map pin are required before submitting.
+                  </p>
 
                   {showMap && (
                     <div className="border border-gray-100 rounded-3xl overflow-hidden mb-4">
@@ -1090,6 +1177,7 @@ export default function VendorDashboard() {
                         <input 
                           required
                           type="number" 
+                          min="1"
                           className="w-full pl-10 pr-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-bold text-gray-700"
                           value={newHoarding.pricePerMonth}
                           onChange={(e) => setNewHoarding({...newHoarding, pricePerMonth: e.target.value})}
@@ -1389,6 +1477,47 @@ export default function VendorDashboard() {
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCalendarReminderPopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-100 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <CalendarDays size={22} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Daily Calendar Reminder
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  If any hoarding gets booked offline, please update its calendar here so buyers cannot book those dates from the website.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-medium text-amber-800">
+              Open your listing calendars every day and block offline-booked dates to keep your online availability accurate.
+            </div>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCalendarReminderPopup(false)}
+                className="flex-1 py-4 bg-gray-50 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenCalendarReminder}
+                className="flex-1 py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100"
+              >
+                Open Listing Calendars
+              </button>
             </div>
           </div>
         </div>
@@ -1884,6 +2013,21 @@ function BookingRequests({
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         {booking.status === "confirmed" ? "Paid" : "Awaiting payment"}
                       </p>
+                      {booking.orderId && (
+                        <p className="text-[10px] font-medium text-gray-400 break-all">
+                          Order: <span className="font-mono">{booking.orderId}</span>
+                        </p>
+                      )}
+                      {booking.paymentId && (
+                        <p className="text-[10px] font-medium text-green-600 break-all">
+                          Payment: <span className="font-mono">{booking.paymentId}</span>
+                        </p>
+                      )}
+                      {booking.paidAt && (
+                        <p className="text-[10px] font-medium text-gray-400">
+                          Paid on {new Date(booking.paidAt).toLocaleString()}
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-6">
                       <span

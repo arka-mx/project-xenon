@@ -70,7 +70,8 @@ export function calculateCampaignPricing(
     gatewayCharges: Math.ceil(gatewayCharges),
     gst: Math.ceil(gst),
     totalAmount,
-    platformFee: Math.ceil(hoardspaceCommission + gatewayCharges + gst),
+    // Platform revenue is only the HoardSpace commission portion.
+    platformFee: Math.ceil(hoardspaceCommission),
   };
 }
 

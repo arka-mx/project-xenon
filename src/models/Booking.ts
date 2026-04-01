@@ -16,6 +16,7 @@ export interface IBooking extends Document {
     | 'cancelled';
   paymentId?: string;
   orderId?: string;
+  paidAt?: Date;
   createdAt: Date;
 }
 
@@ -34,6 +35,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
   },
   paymentId: { type: String },
   orderId: { type: String },
+  paidAt: { type: Date },
 }, { timestamps: true });
 
 const Booking =

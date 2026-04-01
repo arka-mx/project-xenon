@@ -97,7 +97,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
          area: data.area,
          state: data.state,
          zipCode: data.zipCode,
-         ...((data.latitude && data.longitude) ? { coordinates: { lat: data.latitude, lng: data.longitude } } : {})
+         coordinates: {
+            lat: data.latitude,
+            lng: data.longitude,
+         },
       };
       hoarding.dimensions = {
          width: data.width,

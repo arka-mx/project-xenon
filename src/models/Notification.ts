@@ -4,7 +4,11 @@ export interface INotification extends Document {
   user: mongoose.Types.ObjectId;
   title: string;
   content: string;
-  type: "booking_approved" | "booking_rejected" | "booking_reopened";
+  type:
+    | "booking_approved"
+    | "booking_rejected"
+    | "booking_reopened"
+    | "booking_confirmed";
   status: "unread" | "read";
   metadata?: {
     bookingId?: string;
@@ -21,7 +25,12 @@ const NotificationSchema = new Schema<INotification>(
     content: { type: String, required: true },
     type: {
       type: String,
-      enum: ["booking_approved", "booking_rejected", "booking_reopened"],
+      enum: [
+        "booking_approved",
+        "booking_rejected",
+        "booking_reopened",
+        "booking_confirmed",
+      ],
       required: true,
     },
     status: {

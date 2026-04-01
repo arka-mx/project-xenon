@@ -41,10 +41,10 @@ export async function GET(req: Request) {
         const pendingHoardings = await Hoarding.countDocuments({ status: 'pending' });
 
         const totalBookings = await Booking.countDocuments();
-        // Assume confirmed bookings are those with a payment status or just use 'confirmed' status
         const confirmedBookings = await Booking.find({ status: 'confirmed' });
         
         const totalGMV = confirmedBookings.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+        // platformFee stores only HoardSpace commission for each transaction
         const platformRevenue = confirmedBookings.reduce((acc, curr) => acc + (curr.platformFee || 0), 0);
 
         // Get recent activities

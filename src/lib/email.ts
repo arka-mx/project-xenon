@@ -219,3 +219,101 @@ export async function sendWelcomeEmail(
     from: generalFromEmail,
   });
 }
+
+export async function sendBookingConfirmationEmail({
+  email,
+  buyerName,
+  hoardingName,
+  city,
+  startDate,
+  endDate,
+  totalAmount,
+  orderId,
+  paymentId,
+  paidAt,
+}: {
+  email: string;
+  buyerName: string;
+  hoardingName: string;
+  city?: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  totalAmount: number;
+  orderId?: string;
+  paymentId?: string;
+  paidAt?: Date | string;
+}): Promise<EmailResult> {
+  const formattedStart = new Date(startDate).toLocaleDateString("en-IN");
+  const formattedEnd = new Date(endDate).toLocaleDateString("en-IN");
+  const formattedPaidAt = paidAt
+    ? new Date(paidAt).toLocaleString("en-IN")
+    : new Date().toLocaleString("en-IN");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Booking Confirmed - HoardSpace</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 640px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Booking Confirmed</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">Your HoardSpace payment receipt</p>
+        </div>
+
+        <div style="background: #ffffff; padding: 32px; border: 1px solid #e0e0e0; border-top: none;">
+          <p style="font-size: 16px; color: #555;">Hi ${buyerName},</p>
+          <p style="font-size: 16px; color: #555;">Your booking payment has been received successfully. Your campaign is now confirmed.</p>
+
+          <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #111827;">Booking Summary</h3>
+            <p style="margin: 8px 0;"><strong>Listing:</strong> ${hoardingName}</p>
+            <p style="margin: 8px 0;"><strong>Location:</strong> ${city || "N/A"}</p>
+            <p style="margin: 8px 0;"><strong>Campaign Dates:</strong> ${formattedStart} to ${formattedEnd}</p>
+            <p style="margin: 8px 0;"><strong>Total Paid:</strong> Rs ${Number(totalAmount || 0).toLocaleString("en-IN")}</p>
+          </div>
+
+          <div style="background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 10px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #111827;">Payment Receipt</h3>
+            <p style="margin: 8px 0;"><strong>Order ID:</strong> ${orderId || "Pending"}</p>
+            <p style="margin: 8px 0;"><strong>Payment ID:</strong> ${paymentId || "Pending"}</p>
+            <p style="margin: 8px 0;"><strong>Paid At:</strong> ${formattedPaidAt}</p>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280;">Please keep this email for your records. You can also view the transaction from your HoardSpace dashboard.</p>
+        </div>
+
+        <div style="text-align: center; padding: 20px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="margin: 0; font-size: 12px; color: #999;">
+            &copy; ${new Date().getFullYear()} HoardSpace. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `Booking Confirmed
+
+Hi ${buyerName},
+
+Your booking payment has been received successfully.
+
+Listing: ${hoardingName}
+Location: ${city || "N/A"}
+Campaign Dates: ${formattedStart} to ${formattedEnd}
+Total Paid: Rs ${Number(totalAmount || 0).toLocaleString("en-IN")}
+Order ID: ${orderId || "Pending"}
+Payment ID: ${paymentId || "Pending"}
+Paid At: ${formattedPaidAt}
+`;
+
+  return sendEmail({
+    to: email,
+    subject: "Booking Confirmed & Payment Receipt - HoardSpace",
+    html,
+    text,
+    from: generalFromEmail,
+  });
+}

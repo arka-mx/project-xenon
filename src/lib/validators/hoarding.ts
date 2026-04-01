@@ -10,8 +10,8 @@ export const hoardingSchema = z.object({
   area: z.string().min(2, "Area is required"),
   state: z.string().min(2, "State is required"),
   zipCode: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.number().finite("Pin the listing on the map"),
+  longitude: z.number().finite("Pin the listing on the map"),
 
   // Physical Specs
   width: z.number().min(1, "Width is required"),
@@ -20,7 +20,7 @@ export const hoardingSchema = z.object({
   lightingType: z.enum(["Lit", "Non-Lit", "Front Lit", "Back Lit"]),
 
   // Commercials
-  pricePerMonth: z.number().min(0, "Price must be positive"),
+  pricePerMonth: z.number().min(1, "Price per month is required"),
   minimumBookingAmount: z.number().min(0).optional(),
   hoardingCode: z.string().optional(),
   trafficFrom: z.string().optional(),

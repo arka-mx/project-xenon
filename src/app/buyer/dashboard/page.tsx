@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Script from "next/script";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import "@fontsource/chiron-goround-tc";
 import {
@@ -62,7 +63,14 @@ interface Booking {
     | "cancelled";
   orderId?: string;
   paymentId?: string;
+  paidAt?: string;
   createdAt: string;
+}
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
 }
 
 interface Stats {
@@ -155,6 +163,7 @@ export default function BuyerDashboard() {
   const [chatLoading, setChatLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const getMessageParty = (
@@ -478,6 +487,103 @@ export default function BuyerDashboard() {
     }
   };
 
+  const handlePayNow = async (booking: Booking) => {
+    if (!booking.hoarding?._id || processingBookingId) return;
+
+    setProcessingBookingId(booking._id);
+    try {
+      const res = await fetchWithAuth("/api/bookings/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking._id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Payment initiation failed");
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency: data.currency,
+        name: "HoardSpace",
+        description: `Premium Booking: ${booking.hoarding.name}`,
+        order_id: data.orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch("/api/bookings/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response),
+            });
+            const verifyData = await verifyRes.json();
+
+            if (!verifyData.success) {
+              throw new Error(verifyData.error || "Payment verification failed");
+            }
+
+            const updatedFields = {
+              status: "confirmed" as const,
+              paymentId:
+                verifyData.booking?.paymentId || response.razorpay_payment_id,
+              orderId: verifyData.booking?.orderId || response.razorpay_order_id,
+              paidAt: verifyData.booking?.paidAt || new Date().toISOString(),
+            };
+
+            setBookings((prev) =>
+              prev.map((item) =>
+                item._id === booking._id ? { ...item, ...updatedFields } : item,
+              ),
+            );
+            setActiveBookings((prev) =>
+              prev.map((item) =>
+                item._id === booking._id ? { ...item, ...updatedFields } : item,
+              ),
+            );
+            setPastBookings((prev) =>
+              prev.map((item) =>
+                item._id === booking._id ? { ...item, ...updatedFields } : item,
+              ),
+            );
+            setStats((prev) => ({
+              ...prev,
+              confirmed: prev.confirmed + 1,
+              pending: Math.max(0, prev.pending - 1),
+              totalSpent: prev.totalSpent + booking.totalAmount,
+            }));
+          } catch (error) {
+            console.error("Payment verification failed", error);
+            alert(
+              error instanceof Error
+                ? error.message
+                : "Payment verification failed",
+            );
+          } finally {
+            setProcessingBookingId(null);
+          }
+        },
+        prefill: { name: user?.name, email: user?.email },
+        theme: { color: "#2563eb" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+      rzp.on("payment.failed", (response: any) => {
+        setProcessingBookingId(null);
+        alert(
+          response?.error?.description || "Payment failed. Please try again.",
+        );
+      });
+    } catch (error) {
+      console.error("Payment initiation failed", error);
+      alert(
+        error instanceof Error ? error.message : "Payment initiation failed",
+      );
+      setProcessingBookingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -493,6 +599,7 @@ export default function BuyerDashboard() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 overflow-hidden" style={{ fontFamily: "'Chiron GoRound TC', sans-serif" }}>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-100 items-center pt-4 pb-8 px-4 hidden lg:flex lg:flex-col">
         <div className="mb-2 w-full px-2"></div>
@@ -740,7 +847,7 @@ export default function BuyerDashboard() {
                           <p className="text-sm font-black text-gray-900">
                             ₹{booking.totalAmount.toLocaleString()}
                           </p>
-                          <span className="text-[9px] font-black uppercase text-green-500 bg-green-50 px-2 py-0.5 rounded-lg">Confirmed</span>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${getBookingStatusClasses(booking.status)}`}>{booking.status}</span>
                         </div>
                       </div>
                     ))}
@@ -825,15 +932,36 @@ export default function BuyerDashboard() {
                             </Link>
                           )}
                           {booking.status === "approved" && booking.hoarding?._id && (
-                            <Link
-                              href={`/bookings/${booking.hoarding._id}?bookingId=${booking._id}&start=${encodeURIComponent(booking.startDate)}&end=${encodeURIComponent(booking.endDate)}`}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors"
+                            <button
+                              type="button"
+                              onClick={() => handlePayNow(booking)}
+                              disabled={processingBookingId === booking._id}
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
-                              Pay Now
+                              {processingBookingId === booking._id ? "Processing..." : "Pay Now"}
                               <ArrowRight size={12} />
-                            </Link>
+                            </button>
                           )}
                         </div>
+                        {(booking.paymentId || booking.orderId || booking.paidAt) && (
+                          <div className="pt-1 space-y-1">
+                            {booking.orderId && (
+                              <p className="text-[10px] font-medium text-gray-400 break-all">
+                                Order ID: <span className="font-mono">{booking.orderId}</span>
+                              </p>
+                            )}
+                            {booking.paymentId && (
+                              <p className="text-[10px] font-medium text-green-600 break-all">
+                                Payment ID: <span className="font-mono">{booking.paymentId}</span>
+                              </p>
+                            )}
+                            {booking.paidAt && (
+                              <p className="text-[10px] font-medium text-gray-400">
+                                Paid on {new Date(booking.paidAt).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        )}
                         <p className="text-[11px] font-medium text-gray-500">
                           {booking.status === "requested" && "Waiting for vendor approval before payment is enabled."}
                           {booking.status === "approved" && "Vendor approved this request. You can now pay to confirm it."}

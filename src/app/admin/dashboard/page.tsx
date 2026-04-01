@@ -111,7 +111,8 @@ interface Booking {
   totalAmount: number;
   status: string;
   paymentId?: string;
-  orderId: string;
+  orderId?: string;
+  paidAt?: string;
   createdAt: string;
 }
 
@@ -174,6 +175,7 @@ export default function AdminDashboard() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [adminReply, setAdminReply] = useState("");
   const [messageLoading, setMessageLoading] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
 
   // Check authentication
   useEffect(() => {
@@ -360,7 +362,17 @@ export default function AdminDashboard() {
   };
 
   const groupedThreads = getGroupedMessages();
-  const activeThread = groupedThreads.find((t) => t.id === selectedThreadId) || groupedThreads[0];
+  const filteredThreads = groupedThreads.filter((thread) => {
+    const query = messageSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    return [thread.name, thread.lastMessage]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+  const activeThread =
+    filteredThreads.find((t) => t.id === selectedThreadId) || filteredThreads[0];
 
   useEffect(() => {
     console.log("[AdminDashboard] State Update: Admin Messages Count =", adminMessages.length);
@@ -1172,7 +1184,9 @@ export default function AdminDashboard() {
                     className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563eb] outline-none"
                   >
                     <option value="">All Status</option>
-                    <option value="pending">Pending</option>
+                    <option value="requested">Requested</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                     <option value="confirmed">Confirmed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
@@ -1277,7 +1291,7 @@ export default function AdminDashboard() {
                               <div>
                                 <span className="text-gray-500">Order ID:</span>
                                 <p className="font-mono text-gray-700 break-all">
-                                  {booking.orderId}
+                                  {booking.orderId || "Not created"}
                                 </p>
                               </div>
                               {booking.paymentId && (
@@ -1290,6 +1304,14 @@ export default function AdminDashboard() {
                                   </p>
                                 </div>
                               )}
+                              {booking.paidAt && (
+                                <div>
+                                  <span className="text-gray-500">Paid At:</span>
+                                  <p className="text-gray-700">
+                                    {new Date(booking.paidAt).toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4">
@@ -1297,9 +1319,13 @@ export default function AdminDashboard() {
                               className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
                                 booking.status === "confirmed"
                                   ? "bg-green-100 text-green-700"
-                                  : booking.status === "pending"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
+                                  : booking.status === "approved"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : booking.status === "requested"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : booking.status === "rejected" || booking.status === "cancelled"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-gray-100 text-gray-600"
                               }`}
                             >
                               {booking.status}
@@ -1336,24 +1362,28 @@ export default function AdminDashboard() {
                           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <input 
                             type="text" 
+                            value={messageSearchQuery}
+                            onChange={(e) => setMessageSearchQuery(e.target.value)}
                             placeholder="Find conversations..." 
                             className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm outline-none placeholder:text-gray-400 font-medium focus:ring-2 focus:ring-blue-100"
                           />
                        </div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
-                       {groupedThreads.length === 0 ? (
+                       {filteredThreads.length === 0 ? (
                          <div className="p-10 text-center space-y-2 opacity-50">
                             <MessageSquare className="mx-auto text-gray-300" size={32} />
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No Messages Yet</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                              {messageSearchQuery.trim() ? "No Matching Conversations" : "No Messages Yet"}
+                            </p>
                          </div>
                        ) : (
                         <div className="p-3 space-y-1">
-                          {groupedThreads.map((thread) => (
+                          {filteredThreads.map((thread) => (
                             <div 
                               key={thread.id} 
                               onClick={() => setSelectedThreadId(thread.id)}
-                              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 ${selectedThreadId === thread.id || (!selectedThreadId && thread.id === groupedThreads[0]?.id) ? "bg-white shadow-lg shadow-blue-100/50 border border-blue-50" : "hover:bg-white/50"}`}
+                              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 ${selectedThreadId === thread.id || (!selectedThreadId && thread.id === filteredThreads[0]?.id) ? "bg-white shadow-lg shadow-blue-100/50 border border-blue-50" : "hover:bg-white/50"}`}
                             >
                                <div className="flex justify-between items-start mb-1">
                                   <p className={`text-sm font-black ${selectedThreadId === thread.id ? "text-blue-600" : "text-gray-900"}`}>{thread.name}</p>
