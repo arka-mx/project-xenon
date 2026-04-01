@@ -1,49 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import {
   Mail,
   Phone,
   MapPin,
-  Send,
-  CheckCircle,
   MessageCircle,
 } from "lucide-react";
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setSuccess(true);
-    setIsSubmitting(false);
-    setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-
-    setTimeout(() => setSuccess(false), 5000);
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -388,121 +353,26 @@ export default function ContactPage() {
           </div>
         </div>
 
-        {/* Contact Form */}
-        <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 md:p-12 relative overflow-hidden">
+        {/* Contact Action */}
+        <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 md:p-16 relative overflow-hidden flex flex-col items-center justify-center text-center">
           {/* Subtle background blob */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-50 blur-3xl pointer-events-none"></div>
           
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-8 relative z-10">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-6 relative z-10">
             Send us a message
           </h2>
 
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-xl flex items-center gap-3">
-              <CheckCircle className="w-5 h-5" />
-              <span>
-                Message sent successfully! We'll get back to you soon.
-              </span>
-            </div>
-          )}
+          <p className="text-lg text-slate-600 mb-10 max-w-2xl relative z-10">
+            Click the button below to open your email client and send us a message directly. We typically respond within 24 hours.
+          </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Your Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-none focus:bg-white focus:ring-0 focus:border-blue-600 outline-none transition-all font-medium text-black placeholder:text-slate-400"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-none focus:bg-white focus:ring-0 focus:border-blue-600 outline-none transition-all font-medium text-black placeholder:text-slate-400"
-                  placeholder="john@example.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-none focus:bg-white focus:ring-0 focus:border-blue-600 outline-none transition-all font-medium text-black placeholder:text-slate-400"
-                  placeholder="+91 98765 43210"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-none focus:bg-white focus:ring-0 focus:border-blue-600 outline-none transition-all font-medium text-black placeholder:text-slate-400"
-                  placeholder="How can we help?"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">
-                Message
-              </label>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                required
-                rows={6}
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-none focus:bg-white focus:ring-0 focus:border-blue-600 outline-none transition-all resize-none font-medium text-black placeholder:text-slate-400"
-                placeholder="Tell us more about your inquiry..."
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-4 px-6 rounded-none font-black text-xs sm:text-sm uppercase tracking-widest hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center gap-3 mt-4"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send size={18} />
-                  Send Message
-                </>
-              )}
-            </button>
-          </form>
+          <a
+            href="mailto:bookings@hoardspace.in"
+            className="w-full md:w-auto min-w-[300px] bg-blue-600 text-white py-5 px-8 rounded-none font-black text-sm uppercase tracking-widest hover:bg-slate-900 transition-colors flex items-center justify-center gap-3 relative z-10"
+          >
+            <Mail size={20} />
+            Email Us Now
+          </a>
         </div>
       </div>
     </div>
