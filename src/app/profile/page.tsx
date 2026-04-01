@@ -23,11 +23,12 @@ import {
   FileText,
   ShieldCheck,
   AlertCircle,
-  LogOut,
   CheckCircle,
   Clock,
   Shield,
   ArrowRight,
+  Camera,
+  Loader2 as Spinner,
 } from "lucide-react";
 import {
   profileKycSchema,
@@ -77,7 +78,6 @@ export default function ProfilePage() {
   const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
   const [verifyingPhoneOtp, setVerifyingPhoneOtp] = useState(false);
   const PHONE_OTP_COOLDOWN_SECONDS = 60;
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<{
@@ -99,7 +99,6 @@ export default function ProfilePage() {
           setUser(data.user);
           setPhoneInput(data.user.phone || "");
           setPhotoPreview(data.user.image || null);
-          setPhotoFile(null);
           setPhotoStatus(null);
         const kycDefaults = {
           companyName: "",
@@ -262,7 +261,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoSelect = (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -272,25 +271,14 @@ export default function ProfilePage() {
       URL.revokeObjectURL(photoPreview);
     }
 
-    setPhotoFile(file);
-    setPhotoStatus(null);
-    setPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const handleUploadPhoto = async () => {
-    if (!photoFile) {
-      setPhotoStatus({
-        type: "error",
-        message: "Please select an image before uploading.",
-      });
-      return;
-    }
-
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreview(previewUrl);
     setPhotoStatus(null);
     setUploadingPhoto(true);
+
     try {
       const formData = new FormData();
-      formData.append("photo", photoFile);
+      formData.append("photo", file);
 
       const res = await fetchWithAuth("/api/profile/upload-photo", {
         method: "POST",
@@ -306,11 +294,7 @@ export default function ProfilePage() {
         type: "success",
         message: data.message || "Profile photo updated.",
       });
-      setPhotoFile(null);
-      setPhotoPreview(data.imageUrl || photoPreview);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setPhotoPreview(data.imageUrl || previewUrl);
       await loadUser();
     } catch (err: unknown) {
       console.error("Upload error", err);
@@ -320,8 +304,12 @@ export default function ProfilePage() {
       });
     } finally {
       setUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
+
 
   const handleKYCSubmit = async (data: ProfileKYCInput) => {
     setError("");
@@ -389,41 +377,41 @@ export default function ProfilePage() {
         </div>
         {/* Header / Profile Card */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-          <div className="bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] h-32 relative">
-            <div className="absolute top-4 right-4 flex gap-3">
-              {user.role === "admin" && (
-                <Link
-                  href="/admin/dashboard"
-                  className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-lg"
-                >
-                  <Shield size={16} />
-                  Admin Dashboard
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors backdrop-blur-sm text-sm font-medium"
-              >
-                <LogOut size={16} /> Logout
-              </button>
-            </div>
-          </div>
+          <div className="bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] h-32 relative" />
           <div className="px-8 pb-8">
             <div className="relative flex justify-between items-end -mt-12 mb-6">
               <div className="flex items-end gap-6">
-                <div className="h-24 w-24 rounded-2xl bg-white p-1 shadow-lg">
-                  <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center text-[#2563eb]">
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt={user.name}
-                        className="h-full w-full object-cover rounded-xl"
-                      />
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-24 w-24 rounded-2xl bg-white p-1 shadow-lg cursor-pointer group relative hover:scale-105 transition-transform"
+                >
+                  <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center text-[#2563eb] overflow-hidden">
+                    {uploadingPhoto ? (
+                      <Spinner className="animate-spin" size={24} />
                     ) : (
-                      <User size={40} />
+                      <>
+                        {photoPreview ? (
+                          <img
+                            src={photoPreview}
+                            alt={user.name}
+                            className="h-full w-full object-cover rounded-xl"
+                          />
+                        ) : (
+                          <User size={40} />
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                          <Camera className="text-white" size={24} />
+                        </div>
+                      </>
                     )}
                   </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                  />
                 </div>
                 <div className="pb-1">
                   <p className="text-sm text-gray-500 capitalize">
@@ -605,82 +593,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Profile Picture */}
-      {["buyer", "vendor"].includes(user.role) && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">
-                {user.role === "vendor"
-                  ? "Vendor Profile Picture"
-                  : "Buyer Profile Picture"}
-              </h2>
-              <p className="text-sm text-gray-500">
-                {user.role === "vendor"
-                  ? "Upload a brand or personal image so buyers feel confident booking from you."
-                  : "Upload a friendly face or brand avatar so vendors can recognize you while chatting."}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="h-20 w-20 rounded-2xl border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center text-gray-400">
-              {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Profile preview"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-sm font-semibold text-gray-500">
-                  No photo
-                </span>
-              )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 bg-white hover:border-[#2563eb] hover:text-[#2563eb] transition-colors"
-                >
-                  Choose file
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUploadPhoto}
-                  disabled={!photoFile || uploadingPhoto}
-                  className="px-4 py-2 rounded-lg bg-[#2563eb] text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploadingPhoto ? "Uploading..." : "Upload photo"}
-                </button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handlePhotoSelect}
-                />
-              </div>
-              <p className="text-xs text-gray-400">
-                Supported formats: JPG/PNG. Keep file size under 5MB.
-              </p>
-              <p className="text-xs text-gray-400">
-                Your photo is stored securely via Cloudinary and linked to your
-                buyer profile.
-              </p>
-              {photoStatus && (
-                <div
-                  className={`rounded-lg px-3 py-2 text-sm ${
-                    photoStatus.type === "success"
-                      ? "bg-green-50 text-green-700 border border-green-100"
-                      : "bg-red-50 text-red-700 border border-red-100"
-                  }`}
-                >
-                  {photoStatus.message}
-                </div>
-              )}
-            </div>
-          </div>
+      {photoStatus && (
+        <div className={`mt-4 rounded-xl px-4 py-3 text-sm font-bold animate-in fade-in slide-in-from-top-2 ${
+          photoStatus.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
+        }`}>
+          {photoStatus.message}
         </div>
       )}
 

@@ -8,14 +8,23 @@ import { ChevronRight, ChevronDown, List, Map as MapIcon, User, Tag, Camera } fr
 export default function ExploreClient({ initialHoardings, initialCity = "" }: { initialHoardings: any[], initialCity?: string }) {
   const [hoardings, setHoardings] = useState(initialHoardings);
   const [searchQuery, setSearchQuery] = useState(initialCity.toLowerCase());
+  const [sortBy, setSortBy] = useState("default");
   
   // Dummy filtering state purely for UI mimicry
   const [locationOpen, setLocationOpen] = useState(true);
   const [adOptionsOpen, setAdOptionsOpen] = useState(true);
   const [litOpen, setLitOpen] = useState(true);
 
+  // Pre-process hoardings for pricing consistency
+  const processedHoardings = hoardings.map(h => {
+    const minSpend = (typeof h.minimumBookingAmount === "number" && h.minimumBookingAmount > 0)
+      ? h.minimumBookingAmount
+      : (h.pricePerMonth || 0);
+    return { ...h, effectiveMinSpend: minSpend };
+  });
+
   // Filter hoardings (mock client-side filtering)
-  const filteredHoardings = hoardings.filter((h) => {
+  const filteredHoardings = processedHoardings.filter((h) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -23,6 +32,13 @@ export default function ExploreClient({ initialHoardings, initialCity = "" }: { 
       h.location.city.toLowerCase().includes(query) ||
       h.location.area.toLowerCase().includes(query)
     );
+  });
+
+  // Sort hoardings
+  const sortedHoardings = [...filteredHoardings].sort((a, b) => {
+    if (sortBy === "price-asc") return a.effectiveMinSpend - b.effectiveMinSpend;
+    if (sortBy === "price-desc") return b.effectiveMinSpend - a.effectiveMinSpend;
+    return 0; // Default/Top Searched (no change)
   });
 
   return (
@@ -140,10 +156,14 @@ export default function ExploreClient({ initialHoardings, initialCity = "" }: { 
               </div>
 
               <div className="relative">
-                <select className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer min-w-[200px]">
-                  <option>Sort by : Top Searched</option>
-                  <option>Sort by : Price Low to High</option>
-                  <option>Sort by : Price High to Low</option>
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer min-w-[200px]"
+                >
+                  <option value="default">Sort by : Top Searched</option>
+                  <option value="price-asc">Sort by : Price Low to High</option>
+                  <option value="price-desc">Sort by : Price High to Low</option>
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
@@ -152,18 +172,12 @@ export default function ExploreClient({ initialHoardings, initialCity = "" }: { 
 
           {/* Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredHoardings.map((hoarding, idx) => {
+            {sortedHoardings.map((hoarding, idx) => {
               const sampleImages = [
                 'https://res.cloudinary.com/dpju1wia5/image/upload/v1774848145/v4malipjjxwiovgncshj.png',
                 'https://res.cloudinary.com/dpju1wia5/image/upload/v1774848146/rcmhjqgezin7s7hbsiii.png',
               ];
               const placeholderImage = sampleImages[idx % sampleImages.length];
-              if (
-                !(typeof hoarding.minimumBookingAmount === "number" &&
-                hoarding.minimumBookingAmount > 0)
-              ) {
-                hoarding.minimumBookingAmount = hoarding.pricePerMonth || 0;
-              }
 
               return (
               <Link href={`/hoardings/${hoarding._id}`} key={hoarding._id}>
@@ -211,7 +225,7 @@ export default function ExploreClient({ initialHoardings, initialCity = "" }: { 
                       <div className="flex items-center gap-3 text-slate-600">
                         <Tag className="w-4 h-4 text-[#2563eb]" />
                         <span className="text-sm font-medium">
-                          ₹ {hoarding.minimumBookingAmount ? hoarding.minimumBookingAmount.toLocaleString('en-IN') : '23,800'} Min Spend
+                          ₹ {hoarding.effectiveMinSpend ? hoarding.effectiveMinSpend.toLocaleString('en-IN') : '23,800'} Min Spend
                         </span>
                       </div>
                     </div>
@@ -221,7 +235,7 @@ export default function ExploreClient({ initialHoardings, initialCity = "" }: { 
               );
             })}
 
-            {filteredHoardings.length === 0 && (
+            {sortedHoardings.length === 0 && (
               <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 rounded-xl">
                 <p className="font-bold mb-2">No hoardings match your search criteria.</p>
                 <p className="text-sm">Try widening your search inputs.</p>
