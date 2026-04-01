@@ -5,7 +5,7 @@ export const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(['buyer', 'vendor', 'admin']),
+  role: z.enum(['buyer', 'vendor']),
 });
 
 export const loginSchema = z.object({
@@ -40,9 +40,14 @@ export const kycSchema = z.object({
   documents: z.array(z.string().url()).optional(),
 });
 
+export const profileKycSchema = kycSchema.omit({
+  phone: true,
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type PhoneInput = z.infer<typeof phoneSchema>;
 export type OTPInput = z.infer<typeof otpSchema>;
 export type KYCInput = z.infer<typeof kycSchema>;
+export type ProfileKYCInput = z.infer<typeof profileKycSchema>;
 

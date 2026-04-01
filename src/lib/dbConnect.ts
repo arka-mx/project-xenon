@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ensureDefaultAdminUser } from '@/lib/ensureDefaultAdmin';
 
 type ConnectionObject = {
   isConnected?: number;
@@ -6,10 +7,15 @@ type ConnectionObject = {
 
 const connection: ConnectionObject = {};
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown database error';
+}
+
 async function dbConnect(): Promise<void> {
   // Check if already connected
   if (connection.isConnected) {
     console.log('Using existing database connection');
+    await ensureDefaultAdminUser();
     return;
   }
 
@@ -17,6 +23,7 @@ async function dbConnect(): Promise<void> {
   if (mongoose.connections[0]?.readyState === 1) {
     connection.isConnected = mongoose.connections[0].readyState;
     console.log('Using existing mongoose connection');
+    await ensureDefaultAdminUser();
     return;
   }
 
@@ -35,10 +42,12 @@ async function dbConnect(): Promise<void> {
 
     connection.isConnected = db.connections[0].readyState;
     console.log('Database connected successfully');
-  } catch (error: any) {
-    console.error('Database connection failed:', error.message);
+    await ensureDefaultAdminUser();
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    console.error('Database connection failed:', message);
     connection.isConnected = 0;
-    throw new Error(`DB Connection Error: ${error.message}`);
+    throw new Error(`DB Connection Error: ${message}`);
   }
 }
 

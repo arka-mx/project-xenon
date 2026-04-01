@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         emailVerified: user.emailVerified,
         isPhoneVerified: user.isPhoneVerified,
         kycStatus: user.kycStatus,
+        kycDetails: user.kycDetails,
         image: user.image
       }
     });

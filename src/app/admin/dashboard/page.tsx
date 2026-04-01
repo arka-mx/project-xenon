@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { normalizeKycStatus, RESETTABLE_KYC_STATUSES } from "@/lib/kycStatus";
 import {
   Users,
+  User as UserIcon,
   Building2,
   ShoppingCart,
   CheckCircle,
@@ -50,6 +52,7 @@ interface User {
   name: string;
   email: string;
   phone?: string;
+  image?: string;
   role: string;
   emailVerified: boolean;
   isPhoneVerified: boolean;
@@ -136,6 +139,9 @@ export default function AdminDashboard() {
     loading: boolean;
   }>({ isOpen: false, user: null, loading: false });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const modalStatus = userDetailsModal.user
+    ? normalizeKycStatus(userDetailsModal.user.kycStatus)
+    : "not_submitted";
 
   // Message states
   const [adminMessages, setAdminMessages] = useState<any[]>([]);
@@ -523,12 +529,12 @@ export default function AdminDashboard() {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Pending KYC</p>
+                  <p className="text-sm text-gray-500 font-medium">Submitted KYC</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {stats.users.pendingKYC}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1 uppercase font-black italic tracking-widest">
-                    Requires Audit
+                    Awaiting Review
                   </p>
                 </div>
                 <Clock className="text-yellow-500" size={32} />
@@ -607,8 +613,8 @@ export default function AdminDashboard() {
               >
                 <MessageSquare size={18} />
                 Messages
-              </button>
-            </div>
+                      </button>
+                    </div>
           </div>
 
           {/* Tab Content */}
@@ -649,7 +655,7 @@ export default function AdminDashboard() {
                   >
                     <option value="">All KYC Status</option>
                     <option value="not_submitted">Not Submitted</option>
-                    <option value="pending">Pending</option>
+                    <option value="submitted">Submitted</option>
                     <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
                   </select>
@@ -678,21 +684,36 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {users.map((user) => (
+                      {users.map((user) => {
+                        const normalizedStatus = normalizeKycStatus(user.kycStatus);
+                        return (
                         <tr key={user._id} className="hover:bg-gray-50">
                           <td className="px-4 py-4">
-                            <div>
-                              <p className="font-semibold text-gray-900">
-                                {user.name}
-                              </p>
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <Mail size={12} /> {user.email}
-                              </p>
-                              {user.phone && (
-                                <p className="text-sm text-gray-500 flex items-center gap-1">
-                                  <Phone size={12} /> {user.phone}
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center text-gray-400">
+                                {user.image ? (
+                                  <img
+                                    src={user.image}
+                                    alt={user.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <UserIcon size={20} />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">
+                                  {user.name}
                                 </p>
-                              )}
+                                <p className="text-sm text-gray-500 flex items-center gap-1">
+                                  <Mail size={12} /> {user.email}
+                                </p>
+                                {user.phone && (
+                                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                                    <Phone size={12} /> {user.phone}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-4">
@@ -735,16 +756,16 @@ export default function AdminDashboard() {
                           <td className="px-4 py-4">
                             <span
                               className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                                user.kycStatus === "approved"
+                                normalizedStatus === "approved"
                                   ? "bg-green-100 text-green-700"
-                                  : user.kycStatus === "pending"
+                                  : normalizedStatus === "submitted"
                                     ? "bg-yellow-100 text-yellow-700"
-                                    : user.kycStatus === "rejected"
+                                    : normalizedStatus === "rejected"
                                       ? "bg-red-100 text-red-700"
                                       : "bg-gray-100 text-gray-700"
                               }`}
                             >
-                              {user.kycStatus.replace("_", " ")}
+                              {normalizedStatus.replace("_", " ")}
                             </span>
                           </td>
                           <td className="px-4 py-4">
@@ -756,7 +777,7 @@ export default function AdminDashboard() {
                               >
                                 <Eye size={14} />
                               </button>
-                              {user.kycStatus === "pending" && (
+                                {normalizedStatus === "submitted" && (
                                 <>
                                   <button
                                     onClick={() =>
@@ -794,7 +815,8 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                     </tbody>
                   </table>
                   {users.length === 0 && (
@@ -1315,6 +1337,25 @@ export default function AdminDashboard() {
                       Basic Information
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2 flex items-center gap-4">
+                        <div className="h-16 w-16 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center text-gray-400">
+                          {userDetailsModal.user.image ? (
+                            <img
+                              src={userDetailsModal.user.image}
+                              alt={userDetailsModal.user.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <UserIcon size={32} />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Profile Image</p>
+                          <p className="text-gray-900 font-medium">
+                            {userDetailsModal.user.image ? "Uploaded" : "Not provided"}
+                          </p>
+                        </div>
+                      </div>
                       <div>
                         <label className="text-sm font-semibold text-gray-600">
                           Name
@@ -1370,17 +1411,16 @@ export default function AdminDashboard() {
                         <p>
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                              userDetailsModal.user.kycStatus === "approved"
+                              modalStatus === "approved"
                                 ? "bg-green-100 text-green-700"
-                                : userDetailsModal.user.kycStatus === "pending"
+                                : modalStatus === "submitted"
                                   ? "bg-yellow-100 text-yellow-700"
-                                  : userDetailsModal.user.kycStatus ===
-                                      "rejected"
+                                  : modalStatus === "rejected"
                                     ? "bg-red-100 text-red-700"
                                     : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {userDetailsModal.user.kycStatus.replace("_", " ")}
+                            {modalStatus.replace("_", " ")}
                           </span>
                         </p>
                       </div>
@@ -1411,8 +1451,8 @@ export default function AdminDashboard() {
                             <p className="text-gray-900 font-medium">
                               {userDetailsModal.user.kycDetails.companyName}
                             </p>
-                          </div>
-                        )}
+                    </div>
+                  )}
                         {userDetailsModal.user.kycDetails.gstin && (
                           <div>
                             <label className="text-sm font-semibold text-gray-600">
@@ -1495,7 +1535,7 @@ export default function AdminDashboard() {
 
                   {/* No KYC Submitted */}
                   {(!userDetailsModal.user.kycDetails ||
-                    userDetailsModal.user.kycStatus === "not_submitted") && (
+                    modalStatus === "not_submitted") && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
                       <Clock
                         className="mx-auto text-yellow-600 mb-2"
@@ -1508,7 +1548,7 @@ export default function AdminDashboard() {
                   )}
 
                   {/* KYC Actions */}
-                  {userDetailsModal.user.kycStatus === "pending" && (
+                  {modalStatus === "submitted" && (
                     <div className="flex gap-3 pt-4 border-t">
                       <button
                         onClick={async () => {
@@ -1548,7 +1588,29 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   )}
-                </div>
+                  {RESETTABLE_KYC_STATUSES.includes(modalStatus) && (
+                    <div className="pt-4 border-t">
+                      <button
+                        onClick={async () => {
+                          await handleUpdateKYC(
+                            userDetailsModal.user._id,
+                            "submitted",
+                          );
+                          setUserDetailsModal({
+                            isOpen: false,
+                            user: null,
+                            loading: false,
+                          });
+                        }}
+                        disabled={!!actionLoading}
+                        className="w-full px-6 py-3 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <AlertTriangle size={18} />
+                        Reopen for Review
+                      </button>
+                    </div>
+                  )}
+                    </div>
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   Failed to load user details

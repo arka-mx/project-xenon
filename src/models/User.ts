@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { RAW_KYC_STATUSES, RawKycStatus } from '@/lib/kycStatus';
 
 export type UserRole = 'buyer' | 'vendor' | 'admin';
-export type KYCStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
+export type KYCStatus = RawKycStatus;
 export type AuthProvider = 'local' | 'google';
 
 export interface IKYCDetails {
@@ -63,7 +64,7 @@ const UserSchema: Schema<IUser> = new Schema({
   isPhoneVerified: { type: Boolean, default: false },
   kycStatus: {
     type: String,
-    enum: ['not_submitted', 'pending', 'approved', 'rejected'],
+    enum: RAW_KYC_STATUSES,
     default: 'not_submitted'
   },
   kycDetails: { type: KYCSchema },

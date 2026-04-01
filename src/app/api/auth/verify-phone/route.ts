@@ -53,7 +53,7 @@ export async function POST(req: Request) {
          phone,
       };
       if (context === 'kyc') {
-         updatePayload.kycStatus = 'pending';
+         updatePayload.kycStatus = 'submitted';
       }
 
       const user = await User.findByIdAndUpdate(payload.userId, updatePayload, {

@@ -33,7 +33,13 @@ export async function GET(req: Request) {
 
         const query: any = {};
         if (role) query.role = role;
-        if (kycStatus) query.kycStatus = kycStatus;
+        if (kycStatus) {
+            if (kycStatus === 'submitted' || kycStatus === 'pending') {
+                query.kycStatus = { $in: ['submitted', 'pending'] };
+            } else {
+                query.kycStatus = kycStatus;
+            }
+        }
 
         const users = await User.find(query)
             .select('-password -refreshToken')

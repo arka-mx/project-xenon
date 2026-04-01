@@ -32,7 +32,9 @@ export async function GET(req: Request) {
         const totalUsers = await User.countDocuments();
         const totalVendors = await User.countDocuments({ role: 'vendor' });
         const totalBuyers = await User.countDocuments({ role: 'buyer' });
-        const pendingKYC = await User.countDocuments({ kycStatus: 'pending' });
+        const pendingKYC = await User.countDocuments({
+            kycStatus: { $in: ['submitted', 'pending'] },
+        });
 
         const totalHoardings = await Hoarding.countDocuments();
         const approvedHoardings = await Hoarding.countDocuments({ status: 'approved' });

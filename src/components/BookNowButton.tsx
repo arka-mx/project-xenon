@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { normalizeKycStatus } from "@/lib/kycStatus";
 
 interface BookNowButtonProps {
   hoardingId: string;
@@ -37,6 +38,7 @@ export default function BookNowButton({
       // Step 2: User is logged in, get user data
       const data = await res.json();
       const user = data.user;
+      const normalizedStatus = normalizeKycStatus(user.kycStatus);
       console.log("User logged in:", user);
 
       // Step 3: Check email verification
@@ -48,21 +50,21 @@ export default function BookNowButton({
       }
 
       // Step 4: Check KYC status
-      if (user.kycStatus === "not_submitted") {
+      if (normalizedStatus === "not_submitted") {
         setError("Please complete KYC verification from your profile");
         setTimeout(() => router.push("/profile"), 1000);
         setChecking(false);
         return;
       }
 
-      if (user.kycStatus === "pending") {
+      if (normalizedStatus === "submitted") {
         setError("Your KYC is under review. Please wait for admin approval");
         setTimeout(() => setError(""), 3000);
         setChecking(false);
         return;
       }
 
-      if (user.kycStatus === "rejected") {
+      if (normalizedStatus === "rejected") {
         setError("Your KYC was rejected. Please update from your profile");
         setTimeout(() => router.push("/profile"), 1000);
         setChecking(false);
@@ -70,7 +72,7 @@ export default function BookNowButton({
       }
 
       // Step 5: Only approved/verified users can proceed
-      if (user.kycStatus === "approved" || user.kycStatus === "verified") {
+      if (normalizedStatus === "approved") {
         console.log("All checks passed, navigating to booking page");
         router.push(`/bookings/${hoardingId}`);
       } else {
