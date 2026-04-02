@@ -142,8 +142,110 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Team Member 2 */}
+            {/* CTO */}
             <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
+                  <Image
+                    src="https://avatars.githubusercontent.com/u/99005057?v=4"
+                    alt="Ayantik Sarkar"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">
+                  Ayantik Sarkar
+                </h3>
+                <p className="text-blue-600 font-bold mb-3">
+                  CTO
+                </p>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                  Civil Engineering
+                  <br />
+                  NIT Rourkela
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
+                  <Image
+                    src="/arka.jpeg"
+                    alt="Arka Pal"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">
+                  Arka Pal
+                </h3>
+                <p className="text-blue-600 font-bold mb-3">
+                  Frontend Developer
+                </p>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                  Computer Science Engineering
+                  <br />
+                  NIT Rourkela
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
+                  <Image
+                    src="/shuvam.jpeg"
+                    alt="Shuvam Satapathi"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">
+                  Shuvam Satapathi
+                </h3>
+                <p className="text-blue-600 font-bold mb-3">
+                  Full Stack Developer
+                </p>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                  Artificial Intelligence
+                  <br />
+                  NIT Rourkela
+                </p>
+              </div>
+            </div>
+
+            {/* Team Member 8 */}
+            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
+                  <Image
+                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081079/IMG_2174_b7n0re.jpg"}
+
+                     alt="Durgaprasad Sahoo"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">
+                  Durgaprasad Sahoo
+                </h3>
+                <p className="text-blue-600 font-bold mb-3">
+                  Co-founder
+                </p>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                  Artificial Intelligence
+                  <br />& Machine Learning
+                </p>
+              </div>
+            </div>
+
+            {/* Team Member 2 */}
+            {/* <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
               <div className="flex flex-col items-center text-center">
                 <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
                   <Image
@@ -166,10 +268,10 @@ export default function ContactPage() {
                   IIT Patna
                 </p>
               </div>
-            </div>
+            </div> */}
 
             {/* Team Member 3 */}
-            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+            {/* <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
               <div className="flex flex-col items-center text-center">
                 <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
                   <Image
@@ -192,7 +294,7 @@ export default function ContactPage() {
                   IIT (ISM) Dhanbad
                 </p>
               </div>
-            </div>
+            </div> */}
 
             {/* Team Member 4 */}
             <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
@@ -225,8 +327,8 @@ export default function ContactPage() {
               <div className="flex flex-col items-center text-center">
                 <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
                   <Image
-                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081081/IMG_2176_xx5ksb.jpg"}
-                     alt="Debansh Sahu"
+                  src={"/debansh.jpeg"}
+                    alt="Debansh Sahu"
                     width={128}
                     height={128}
                     className="w-full h-full object-cover"
@@ -236,7 +338,7 @@ export default function ContactPage() {
                   Debansh Sahu
                 </h3>
                 <p className="text-blue-600 font-bold mb-3">
-                  Co-founder & CTO
+                  Co-founder
                 </p>
                 <p className="text-sm font-medium text-slate-700 leading-relaxed">
                   Computer Science
@@ -252,8 +354,7 @@ export default function ContactPage() {
                 <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
                   <Image
                   src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081077/IMG_2168_s7qqig.jpg"}
-            
-                     alt="Churepally Neha"
+                    alt="Churepally Neha"
                     width={128}
                     height={128}
                     className="w-full h-full object-cover"
@@ -263,7 +364,7 @@ export default function ContactPage() {
                   Churepally Neha
                 </h3>
                 <p className="text-blue-600 font-bold mb-3">
-                  Head of Design
+                  Graphic Designer
                 </p>
                 <p className="text-sm font-medium text-slate-700 leading-relaxed">
                   Civil Engineering
@@ -274,7 +375,7 @@ export default function ContactPage() {
             </div>
 
             {/* Team Member 7 */}
-            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
+            {/* <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
               <div className="flex flex-col items-center text-center">
                 <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
                   <Image
@@ -297,33 +398,9 @@ export default function ContactPage() {
                   NIT Rourkela
                 </p>
               </div>
-            </div>
+            </div> */}
 
-            {/* Team Member 8 */}
-            <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-32 h-32 rounded-full mb-6 overflow-hidden border-4 border-slate-50 shadow-md group-hover:border-blue-100 transition-colors">
-                  <Image
-                  src={"https://res.cloudinary.com/du5qoczcn/image/upload/v1773081079/IMG_2174_b7n0re.jpg"}
-
-                     alt="Durgaprasad Sahoo"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">
-                  Durgaprasad Sahoo
-                </h3>
-                <p className="text-blue-600 font-bold mb-3">
-                  Co-founder & Head of AI/ML
-                </p>
-                <p className="text-sm font-medium text-slate-700 leading-relaxed">
-                  Artificial Intelligence
-                  <br />& Machine Learning
-                </p>
-              </div>
-            </div>
+      
 
             {/* Team Member 9 */}
             <div className="bg-white rounded-none shadow-sm border-2 border-slate-200 p-8 hover:border-blue-500 hover:shadow-xl transition-all duration-300 relative group hover:-translate-y-2">
