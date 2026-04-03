@@ -356,7 +356,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563eb]"></div>
       </div>
     );
@@ -376,7 +376,7 @@ export default function ProfilePage() {
           </h2>
         </div>
         {/* Header / Profile Card */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="relative aspect-video rounded-2xl overflow-hidden group border border-gray-100">
           <div className="bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] h-32 relative" />
           <div className="px-8 pb-8">
             <div className="relative flex justify-between items-end -mt-12 mb-6">
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="h-24 w-24 rounded-2xl bg-white p-1 shadow-lg cursor-pointer group relative hover:scale-105 transition-transform"
                 >
-                  <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center text-[#2563eb] overflow-hidden">
+                  <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
                     {uploadingPhoto ? (
                       <Spinner className="animate-spin" size={24} />
                     ) : (
@@ -827,11 +827,11 @@ export default function ProfilePage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     PAN <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    {...kycForm.register("pan")}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#2563eb] outline-none transition-all text-black"
-                    placeholder="PAN Number"
-                  />
+                    <input
+                      {...kycForm.register("pan")}
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#2563eb] outline-none text-black transition-all"
+                      placeholder="PAN Number (e.g. ABCDE1234F)"
+                    />
                   {kycForm.formState.errors.pan && (
                     <p className="text-xs text-red-500 mt-1">
                       {kycForm.formState.errors.pan.message}
@@ -845,8 +845,8 @@ export default function ProfilePage() {
                   </label>
                   <input
                     {...kycForm.register("aadhaar")}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#2563eb] outline-none transition-all text-black"
-                    placeholder="Aadhaar Number"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#2563eb] outline-none text-black"
+                    placeholder="12-digit Aadhaar Number"
                   />
                   {kycForm.formState.errors.aadhaar && (
                     <p className="text-xs text-red-500 mt-1">
